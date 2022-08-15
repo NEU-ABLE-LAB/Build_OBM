@@ -1,0 +1,2 @@
+# Build_OBM
+Building occupant bheavior model: Creates occupant models using the agent based modeling (Mesa). Each agent represent an occupant in a home for now (multiple occupants and their locations to be considered in the future). The resulting model integrates the presence, comfort temperature, habitual interactions with the thermostat (routine based for now), and most importantly the discomfort based thermostat interactions. 
