@@ -1,6 +1,6 @@
 import numpy as np
-# import matplotlib.pyplot as plt
-# import seaborn as sns
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 def Markov_occupancy_model(tp_matrix, sampling_time):
@@ -41,4 +41,34 @@ def Markov_occupancy_model(tp_matrix, sampling_time):
     # sns.lineplot(x=range(0,len(occupancy)),y=occupancy)
     # plt.show()
     return occupancy
+
+
+def Markov_habitual_model(TM,sampling_time):
+    override_schedule = []
+    # Synthesize data for the day, 10-minutes sampling time used for transition matrices. 
+    # Therefore, the data is synthesized for 144 minutes numbers and later sampled based on input parameter "sampling_time"
+    for timestep in range(0, 287):
         
+        # Set state based on current timestep of the day
+        if timestep == 0:
+            # Start state is randomly selected
+            start_state = np.random.choice([1,0])
+            current_state = start_state
+        else:
+            current_state = override_schedule[timestep-1]
+        
+        # Get transition state for the period number
+        probs = TM.loc[(TM['time'] == timestep+1) & (TM['cur_state'] == current_state), 'p_2_0':'p_2_1'].values[0]
+
+        # Probability should add up to 1.
+        if probs[0] + probs[1] != 1:
+            dif = abs(1 - probs[0] - probs[1])
+            probs[0] = probs[0]+dif
+            # raise warning('Total probability does not add up to 1')
+        
+        # Estimate the next state
+        next_state = np.random.choice([0,1], p = probs)
+
+        # Add the next state based on the sampling time
+        override_schedule.extend([next_state]*int(5/sampling_time))
+    return override_schedule

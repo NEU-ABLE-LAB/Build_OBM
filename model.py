@@ -1,7 +1,6 @@
 """ model.py -> Contains basic framework to simulate an occupant agent for a given set of environment inputs """
 
 # Import packages
-from turtle import home
 import mesa
 import pandas as pd
 from tools import *
@@ -15,10 +14,21 @@ class Occupant(mesa.Agent):
         self.home_ID = home_ID
         # Place holder variable to contain environment info for each timestep
         self.current_env_features = None 
-        # Transition matrix to simulate occupant's presence
+        # Flag to show if the change in setpoint was implemented by the occupant
+        self.recent_stp_change = False
+        # Occupancy Model - Transition matrix to simulate occupant's presence
         self.occupancy_tp_matrix = pd.read_csv('data/transition_matrix.csv')
-        # Place holder variable to contain simulated occupancy for a simulation's day
+        # Occupancy Model - Place holder variable to contain simulated occupancy for a simulation's day
         self.occupancy = []
+        # Comfort model - tracking setpoints
+        self.setpoints = {'current': {'heat':None, 'cool': None},\
+             'previous':{'heat':None, 'cool': None}}
+        # Track comfort temperature
+        self.T_CT = 72 # Random value for now
+        # Habitual model - Transition matrix 
+        self.habitual_tp_matrix = pd.read_csv('TM_habitual.csv')
+        self.habitual_schedule = []
+        self.del_T_MSC = 0
 
         print(f"Occupant created, ID: {unique_id}")
 
@@ -29,13 +39,60 @@ class Occupant(mesa.Agent):
             # Occupancy model: If day is new, simulate occupancy for the day
             self.occupancy.extend(Markov_occupancy_model(self.occupancy_tp_matrix, sampling_time = self.model.sampling_frequency))
         
+        # Routine based habitual Model:
+        if self.model.schedule.steps % 24 == 0:
+            # Occupancy model: If day is new, simulate occupancy for the day
+            self.habitual_schedule.extend(Markov_habitual_model(self.habitual_tp_matrix, sampling_time = self.model.sampling_frequency))
+        
         # Comfort Model: Predict comfortable temperature
+        if self.model.schedule.steps == 0:
+            # No prior data exists, assume previous and current data to be same
+            self.setpoints['previous']['heat'] = self.current_env_features['T_stp_heat']
+            self.setpoints['previous']['cool'] = self.current_env_features['T_stp_cool']
+        else:
+            # Update data
+            self.setpoints['previous']['heat'] = self.setpoints['current']['heat']
+            self.setpoints['previous']['cool'] = self.setpoints['current']['cool']
 
-        # Habitual Model:
+        self.setpoints['current']['heat'] = self.current_env_features['T_stp_heat']
+        self.setpoints['current']['cool'] = self.current_env_features['T_stp_cool']
+        
+        # Define change in setpoint
+        T_stp_heat_change = self.setpoints['current']['heat'] - self.setpoints['previous']['heat']
+        T_stp_cool_change = self.setpoints['current']['cool'] - self.setpoints['previous']['cool']
+
+        # Define the comfort temperature if:
+        #   1. The previous change was not incurred by the occupant
+        #   2. There was setpoint change
+        if ( abs(T_stp_cool_change) != 0 or abs(T_stp_heat_change) != 0 ) and not self.recent_stp_change:
+            
+            # Find the type of setpoint change
+            if T_stp_cool_change != 0:
+                cooling_stp_change = True
+            if T_stp_heat_change != 0:
+                heating_stp_change = True
+            
+            # If both type of setpoints were changed then refer to largest setpoint change as the primary setpoint change
+            # TODO: Develop this methodology to find the type of setpoint change. 
+            if cooling_stp_change and heating_stp_change:
+                if abs(cooling_stp_change) > abs(heating_stp_change):
+                    heating_stp_change = False
+                else:
+                    cooling_stp_change = False
+      
+            if not self.recent_stp_change:
+                self.T_CT = np.average(self.setpoints['previous']['heat'], self.setpoints['previous']['cool'])
+            else:
+                self.T_CT = 72 # TODO: If the thermostat schedule was overriden then assign that value
+
+
+        
 
         # Discomfort Model:
 
         # Override decision based on occupancy
+        if self.habitual_schedule[self.model.timestep_day] == 1 or self.occupancy[self.model.timestep_day] == 1:
+            self.del_T_MSC = self.setpoints['current']['cool'] - self.T_CT
 
         print(f"Occupant ID: {self.unique_id} simulated")
 
@@ -51,7 +108,15 @@ class OccupantModel(mesa.Model):
         self.schedule = mesa.time.SimultaneousActivation(self)
         # The data/simulated needs to be simulated at the following frequency
         self.sampling_frequency = sampling_frequency
-
+        # Simulation's timestep equivalent hour of the day
+        self.current_hour_of_the_day = 0
+        # Simulation's timestep equivalent minute of the day
+        self.current_min_of_the_day = 0
+        # Simulation's timestep equivalent day of the week
+        self.current_day_of_the_week = 0
+        #
+        self.timestep_day = 0
+        
         # Create homes
         for home_ID in range(0, N_homes):
             for occup_ID in range(0,self.N_occupants_in_home):
@@ -65,6 +130,22 @@ class OccupantModel(mesa.Model):
 
         # Send simulated indoor env data to the occupant agent
         for agent in self.schedule.agents:
-            agent.env_features = data.loc[self.schedule.steps].copy()
+            agent.current_env_features = data.loc[self.schedule.steps].copy()
 
         self.schedule.step()
+        if self.current_min_of_the_day == 55:
+            self.current_hour_of_the_day += 1
+        if self.current_hour_of_the_day == 24:
+            self.current_hour_of_the_day = 0
+            if self.current_day_of_the_week == 6:
+                self.current_day_of_the_week = 0
+            else:
+                self.current_day_of_the_week += 1 
+        if self.current_min_of_the_day != 55:
+            self.current_min_of_the_day += 5
+        else:
+            self.current_min_of_the_day = 0
+        if self.timestep_day == 288:
+            self.timestep_day = 0
+        else:
+            self.timestep_day += 1
