@@ -72,3 +72,16 @@ def Markov_habitual_model(TM,sampling_time):
         # Add the next state based on the sampling time
         override_schedule.extend([next_state]*int(5/sampling_time))
     return override_schedule
+
+def implement_heat_cool_override(occupant,df):
+
+    if df.T_ctrl < occupant.T_CT:
+        # The occupant feels cold, increase heating and cooling stp
+        occupant.del_T_MSC = occupant.setpoints['current']['heat'] - occupant.T_CT
+        occupant.model.stp_heat = df.T_stp_heat + occupant.del_T_MSC
+        occupant.model.stp_cool = df.T_stp_cool + occupant.del_T_MSC
+    else:
+        # The occupant feels hot, decrease heating and cooling stp
+        occupant.del_T_MSC = occupant.setpoints['current']['cool'] - occupant.T_CT
+        occupant.model.stp_heat = df.T_stp_heat - occupant.del_T_MSC
+        occupant.model.stp_cool = df.T_stp_cool - occupant.del_T_MSC
