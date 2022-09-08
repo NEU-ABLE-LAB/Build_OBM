@@ -2,8 +2,8 @@
 from model import OccupantModel
 import pandas as pd
 import pickle
-import matplotlib.pyplot as plt
-import seaborn as sns
+# import matplotlib.pyplot as plt
+# import seaborn as sns
 
 # Read a local files
 df = pd.read_hdf('sample_data1_stp_processed.h5')
@@ -46,3 +46,4 @@ for timeStepN in range(0,int((1440)/sim_sampling_frequency)):
 # sns.lineplot(x=t,y=T_stp_heat)
 # sns.lineplot(x=t,y=T_stp_cool)
 # plt.show()
+# 1+1

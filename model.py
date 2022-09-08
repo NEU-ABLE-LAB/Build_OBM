@@ -2,7 +2,6 @@
 
 # Import packages
 import mesa
-import pandas as pd
 from tools import *
 
 # Occupant agent class

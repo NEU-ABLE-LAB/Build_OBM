@@ -1,6 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+# import matplotlib.pyplot as plt
+# import seaborn as sns
 
 
 def Markov_occupancy_model(tp_matrix, sampling_time):
@@ -42,7 +42,7 @@ def Markov_occupancy_model(tp_matrix, sampling_time):
     # plt.figure()
     # sns.lineplot(x=range(0,len(sampled_occupancy)),y=sampled_occupancy)
     # plt.show()
-    return occupancy
+    return sampled_occupancy
 
 
 def Markov_habitual_model(TM,sampling_time):
@@ -74,8 +74,11 @@ def Markov_habitual_model(TM,sampling_time):
         next_state = np.random.choice([False,True], p = probs)
 
         # Add the next state based on the sampling time
-        override_schedule.extend([next_state]*int(5/sampling_time))
-    return override_schedule
+        override_schedule.append([next_state]*int(5/sampling_time))
+        
+    sampled_override_schedule = []
+    sampled_override_schedule = [y for x in override_schedule for y in x]
+    return sampled_override_schedule
 
 def decide_heat_cool_stp(T_CT, T_in, T_stp_heat, T_stp_cool):
     """ Decide the change in setpoint based on indoor temperature difference from comfort temperature """
