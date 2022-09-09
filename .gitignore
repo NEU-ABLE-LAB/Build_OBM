@@ -1,6 +1,3 @@
-*.pkl
-*.csv
-*.h5
 __pycache__/
 .vscode/
 data/

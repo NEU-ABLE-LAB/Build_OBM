@@ -94,3 +94,21 @@ def decide_heat_cool_stp(T_CT, T_in, T_stp_heat, T_stp_cool):
         T_stp_heat = T_stp_heat - del_T_MSC
         T_stp_cool = T_stp_cool - del_T_MSC
     return T_stp_cool, T_stp_heat
+
+def update_simulation_timestep(model):
+    if model.timestep_day == 1440/model.sampling_frequency:
+        model.timestep_day = 0
+    else:
+        model.timestep_day += 1
+    if model.current_min_of_the_day == 60 - model.sampling_frequency:
+        model.current_hour_of_the_day += 1
+    if model.current_min_of_the_day != 60 - model.sampling_frequency:
+        model.current_min_of_the_day += model.sampling_frequency
+    else:
+        model.current_min_of_the_day = 0
+    if model.current_hour_of_the_day == 24:
+        model.current_hour_of_the_day = 0
+        if model.current_day_of_the_week == 6:
+            model.current_day_of_the_week = 0
+        else:
+            model.current_day_of_the_week += 1 

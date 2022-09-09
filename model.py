@@ -2,7 +2,7 @@
 
 # Import packages
 import mesa
-from tools import *
+import tools as om_tools
 
 # Occupant agent class
 class Occupant(mesa.Agent):
@@ -50,12 +50,12 @@ class Occupant(mesa.Agent):
         # Synthesize occupancy data
         if self.model.schedule.steps % 24 == 0:
             # Occupancy model: If day is new, simulate occupancy for the day
-            self.occupancy.extend(Markov_occupancy_model(self.occupancy_tp_matrix, sampling_time = self.model.sampling_frequency))
+            self.occupancy.extend(om_tools.Markov_occupancy_model(self.occupancy_tp_matrix, sampling_time = self.model.sampling_frequency))
         
         # Routine based habitual Model:
         if self.model.schedule.steps % 24 == 0:
             # Occupancy model: If day is new, simulate occupancy for the day
-            self.habitual_schedule.extend(Markov_habitual_model(self.habitual_tp_matrix, sampling_time = self.model.sampling_frequency))
+            self.habitual_schedule.extend(om_tools.Markov_habitual_model(self.habitual_tp_matrix, sampling_time = self.model.sampling_frequency))
         
         # Comfort Model: Predict comfortable temperature
         # TODO: Dynamic model to be placed here
@@ -75,7 +75,7 @@ class Occupant(mesa.Agent):
             
             if is_override:
                 # Estimate time to override for the classified override using the random forest regressor model
-                self.TTO = int(np.round(self.discomfort_regres_model.predict([list(self.current_env_features.values())])))
+                self.TTO = int(om_tools.np.round(self.discomfort_regres_model.predict([list(self.current_env_features.values())])))
 
         """ 
         +---------------------------+
@@ -86,11 +86,11 @@ class Occupant(mesa.Agent):
         #  then decide the setpoint change
         if self.habitual_schedule[self.model.timestep_day] and self.occupancy[self.model.timestep_day]:
         
-            T_stp_cool, T_stp_heat = decide_heat_cool_stp(self.T_CT, self.current_env_features['T_in'],\
+            T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.T_CT, self.current_env_features['T_in'],\
                  self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
 
         if self.TTO == 0 and self.occupancy[self.model.timestep_day]:
-            T_stp_cool, T_stp_heat = decide_heat_cool_stp(self.occupant.T_CT, self.current_env_features['T_in'],\
+            T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.occupant.T_CT, self.current_env_features['T_in'],\
                  self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
             self.TTO = None
 
@@ -138,21 +138,7 @@ class OccupantModel(mesa.Model):
             agent.current_env_features = ip_data_env
 
         self.schedule.step()
-
-
-        if self.current_min_of_the_day == 55:
-            self.current_hour_of_the_day += 1
-        if self.current_hour_of_the_day == 24:
-            self.current_hour_of_the_day = 0
-            if self.current_day_of_the_week == 6:
-                self.current_day_of_the_week = 0
-            else:
-                self.current_day_of_the_week += 1 
-        if self.current_min_of_the_day != 55:
-            self.current_min_of_the_day += 5
-        else:
-            self.current_min_of_the_day = 0
-        if self.timestep_day == 288:
-            self.timestep_day = 0
-        else:
-            self.timestep_day += 1
+        
+        # Update simulation specific time parameters
+        om_tools.update_simulation_timestep(self)
+        
