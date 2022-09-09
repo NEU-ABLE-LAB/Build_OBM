@@ -62,6 +62,8 @@ class Occupant(mesa.Agent):
 
         # Discomfort Model:
         if self.TTO is None:
+            # Prepare input data for ML
+            self.current_env_features['mo'] = self.occupancy[self.model.timestep_day]
             # Decrease the timer per timestep if a TTO value exists
             if self.TTO == 0:
                 raise ValueError('Check TTO')

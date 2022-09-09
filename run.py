@@ -34,7 +34,7 @@ for timeStepN in range(0,int((1440)/sim_sampling_frequency)):
                             'T_stp_heat':df.loc[timeStepN,'T_stp_heat'],
                             'hum':df.loc[timeStepN,'hum'],
                             'T_out':df.loc[timeStepN,'T_out'],
-                            'mo':df.loc[timeStepN,'mo'],
+                            'mo':None,
                             'equip_run_heat':df.loc[timeStepN,'equip_run_heat'],
                             'equip_run_cool':df.loc[timeStepN,'equip_run_cool']
                             })

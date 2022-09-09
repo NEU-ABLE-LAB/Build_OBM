@@ -60,7 +60,7 @@ def Markov_habitual_model(TM,sampling_time):
             start_state = np.random.choice([False, True])
             current_state = start_state
         else:
-            current_state = override_schedule[timestep-1]
+            current_state = override_schedule[timestep-1][0]
         
         # Get transition state for the period number
         probs = TM.loc[(TM['time'] == timestep + 1) & (TM['cur_state'] == current_state), 'p_2_0':'p_2_1'].values[0]
