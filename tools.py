@@ -82,6 +82,9 @@ def Markov_habitual_model(TM,sampling_time):
 
 def decide_heat_cool_stp(T_CT, T_in, T_stp_heat, T_stp_cool):
     """ Decide the change in setpoint based on indoor temperature difference from comfort temperature """
+    print('Occupant decides to override.')
+    print(f"Current heating setpoint: {T_stp_heat}")
+    print(f"Current cooling setpoint: {T_stp_cool}")
 
     if T_in < T_CT:
         # The occupant feels cold, increase heating and cooling stp
@@ -93,6 +96,9 @@ def decide_heat_cool_stp(T_CT, T_in, T_stp_heat, T_stp_cool):
         del_T_MSC = abs(T_stp_cool - T_CT)
         T_stp_heat = T_stp_heat - del_T_MSC
         T_stp_cool = T_stp_cool - del_T_MSC
+    
+    print(f"New heating setpoint: {T_stp_heat}")
+    print(f"New cooling setpoint: {T_stp_cool}")
     return T_stp_cool, T_stp_heat
 
 def update_simulation_timestep(model):
