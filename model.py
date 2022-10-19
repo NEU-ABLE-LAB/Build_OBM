@@ -130,12 +130,15 @@ class OccupantModel(mesa.Model):
                 # Add occupant to the scheduler
                 self.schedule.add(occup)
 
-    def step(self, ip_data_env) -> None:
+    def step(self, ip_data_env,units,T_var_names) -> None:
         print(f"Time step: {self.schedule.steps}")
 
         # Send simulated indoor env data to the occupant agent
         for agent in self.schedule.agents:
-            agent.current_env_features = ip_data_env
+            if units.upper() == 'F':
+                agent.current_env_features = ip_data_env
+            else:
+                agent.current_env_features = om_tools.convert_F_to_C(ip_data_env, T_var_names)
 
         self.schedule.step()
         

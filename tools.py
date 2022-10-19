@@ -118,3 +118,8 @@ def update_simulation_timestep(model):
             model.current_day_of_the_week = 0
         else:
             model.current_day_of_the_week += 1 
+
+def convert_F_to_C(ip_data_env, T_var_names):
+    for var in T_var_names:
+        ip_data_env[var] = (ip_data_env[var] - 32) * 5/9
+    return ip_data_env
