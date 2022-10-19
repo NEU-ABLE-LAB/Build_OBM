@@ -23,7 +23,10 @@ class Occupant(mesa.Agent):
         # self.setpoints = {'current': {'heat':None, 'cool': None},\
         #      'previous':{'heat':None, 'cool': None}}
         # Track comfort temperature
-        self.T_CT = 72.0 # Static value for now
+        if self.model.units == 'F':
+            self.T_CT = 70
+        else:
+            self.T_CT = 21
         # Time to override value container
         self.TTO = None
 
@@ -101,8 +104,10 @@ class Occupant(mesa.Agent):
 
 class OccupantModel(mesa.Model):
     """ Occupant model: Contains model simulation information required """
-    def __init__(self, N_homes,N_occupants_in_home, sampling_frequency, TM_occupancy, TM_habitual, model_class, model_regres) -> None:
+    def __init__(self, units, N_homes,N_occupants_in_home, sampling_frequency, TM_occupancy, TM_habitual, model_class, model_regres) -> None:
         super().__init__()
+        # Temperature units
+        self.units = units
         # Number of occupants to be simulated in a home
         self.N_occupants_in_home = N_occupants_in_home
         # Number of homes to be simulated
@@ -130,12 +135,12 @@ class OccupantModel(mesa.Model):
                 # Add occupant to the scheduler
                 self.schedule.add(occup)
 
-    def step(self, ip_data_env,units,T_var_names) -> None:
+    def step(self, ip_data_env,T_var_names) -> None:
         print(f"Time step: {self.schedule.steps}")
 
         # Send simulated indoor env data to the occupant agent
         for agent in self.schedule.agents:
-            if units.upper() == 'F':
+            if self.units.upper() == 'F':
                 agent.current_env_features = ip_data_env
             else:
                 agent.current_env_features = om_tools.convert_F_to_C(ip_data_env, T_var_names)
