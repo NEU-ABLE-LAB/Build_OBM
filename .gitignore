@@ -1,4 +1,6 @@
 __pycache__/
 .vscode/
 data/
+input_data/
 debug.py
+*.csv

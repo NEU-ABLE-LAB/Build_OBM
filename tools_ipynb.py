@@ -3,11 +3,11 @@ def extract_TM_DyD(TM, weekday_df, df_read):
     hours_list = list(range(0,24))*12
     hours_list.sort()
     minutes_list = list(range(0,56,5))*24
-
-    for timestep in range(0,288):
+    
+    for timestep in range(1,289):
         print(f"timestep: {timestep}")
         
-        if timestep == 0:
+        if timestep == 1:
             cur_min = minutes_list[-1]
             cur_hour = hours_list[-1]
             next_min = minutes_list[0]
@@ -15,8 +15,8 @@ def extract_TM_DyD(TM, weekday_df, df_read):
         else:
             cur_min = next_min
             cur_hour = next_hour
-            next_min = minutes_list[timestep]
-            next_hour = hours_list[timestep]
+            next_min = minutes_list[timestep-1]
+            next_hour = hours_list[timestep-1]
 
         idx_curr_non_override = [index for index,value in weekday_df.loc[(weekday_df.DateTime.dt.minute == cur_min) & (weekday_df.DateTime.dt.hour==cur_hour),'mdsp'].items() if value ==False]
         idx_curr_override = [index for index,value in weekday_df.loc[(weekday_df.DateTime.dt.minute == cur_min) & (weekday_df.DateTime.dt.hour==cur_hour),'mdsp'].items() if value == True]

@@ -51,12 +51,12 @@ class Occupant(mesa.Agent):
         """
 
         # Synthesize occupancy data
-        if self.model.schedule.steps % 24 == 0:
+        if (self.model.current_hour_of_the_day == 0) & (self.model.current_min_of_the_day == 0):
             # Occupancy model: If day is new, simulate occupancy for the day
             self.occupancy.extend(om_tools.Markov_occupancy_model(self.occupancy_tp_matrix, sampling_time = self.model.sampling_frequency))
         
         # Routine based habitual Model:
-        if self.model.schedule.steps % 24 == 0:
+        if (self.model.current_hour_of_the_day == 0) & (self.model.current_min_of_the_day == 0):
             # Occupancy model: If day is new, simulate occupancy for the day
             self.habitual_schedule.extend(om_tools.Markov_habitual_model(self.habitual_tp_matrix, sampling_time = self.model.sampling_frequency))
         

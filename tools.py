@@ -52,7 +52,7 @@ def Markov_habitual_model(TM,sampling_time):
 
     # 5-minutes sampling time used for transition matrices. 
     # Therefore, the data is synthesized for 288 minutes numbers and is later sampled based on input parameter "sampling_time"
-    for timestep in range(0, 287):
+    for timestep in range(0, 288):
         
         # Set state based on current timestep of the day
         if timestep == 0:
