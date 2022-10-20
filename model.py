@@ -145,7 +145,7 @@ class OccupantModel(mesa.Model):
                 for var in T_var_names:
                     ip_data_env[var] = om_tools.C_to_F(ip_data_env[var])
 
-                agent.current_env_features = om_tools.convert_F_to_C(ip_data_env, T_var_names)
+                agent.current_env_features = ip_data_env
 
         self.schedule.step()
         
