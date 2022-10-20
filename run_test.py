@@ -3,8 +3,6 @@ import pandas as pd
 import pickle
 import matplotlib.pyplot as plt
 import seaborn as sns
-import sys
-import os
 # sys.path.append(os.path.dirname(__file__)) # Does not work with jupyter notebooks
 from model import OccupantModel
 
@@ -44,25 +42,5 @@ for timeStepN in range(0,int((1440)/sim_sampling_frequency)):
         T_stp_heat.append(agents.output['T_stp_heat'])
         T_stp_cool.append(agents.output['T_stp_cool'])
 sns.set()
-
-
-# %% [markdown]
-# ## Visualize the overrides
-
-# %%
-from turtle import color
-
-
-sns.set()
-fig = sns.lineplot(x=t,y=T_stp_heat,color='orange')
-sns.lineplot(x=t,y=T_stp_cool,color='blue')
-sns.lineplot(x=t,y=df.loc[0:287,'T_ctrl'],color='green')
-
-fig.set_xlabel('Time steps')
-fig.set_ylabel('Setpoint temperature [°F]')
-fig.legend(labels=['$Stp_{heat}$', '$Stp_{cool}$', '$T_{in}$'])
-
-# %%
-
 
 

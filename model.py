@@ -23,10 +23,8 @@ class Occupant(mesa.Agent):
         # self.setpoints = {'current': {'heat':None, 'cool': None},\
         #      'previous':{'heat':None, 'cool': None}}
         # Track comfort temperature
-        if self.model.units == 'F':
-            self.T_CT = 70
-        else:
-            self.T_CT = 21
+        self.T_CT = 70
+        
         # Time to override value container
         self.TTO = None
 
@@ -96,8 +94,9 @@ class Occupant(mesa.Agent):
             T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.occupant.T_CT, self.current_env_features['T_in'],\
                  self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
             self.TTO = None
-
-        self.output['T_stp_cool'], self.output['T_stp_heat'] = T_stp_cool, T_stp_heat
+        if self.model.units == 'F': self.output['T_stp_cool'], self.output['T_stp_heat'] = T_stp_cool, T_stp_heat
+        else: self.output['T_stp_cool'], self.output['T_stp_heat'] = om_tools.F_to_C(T_stp_cool), om_tools.F_to_C(T_stp_heat)
+        
 
 
         print(f"Occupant idN: {self.unique_id} simulated")
@@ -143,6 +142,9 @@ class OccupantModel(mesa.Model):
             if self.units.upper() == 'F':
                 agent.current_env_features = ip_data_env
             else:
+                for var in T_var_names:
+                    ip_data_env[var] = om_tools.C_to_F(ip_data_env[var])
+
                 agent.current_env_features = om_tools.convert_F_to_C(ip_data_env, T_var_names)
 
         self.schedule.step()
