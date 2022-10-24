@@ -11,7 +11,7 @@ Simulates occupant behavior in a home by integrating 4 seperate model in the age
 3. **Habitual model (Routine based)**
 4. **Discomfort model**
 
-# Demo-Preview
+# Demo
 <!-- Add a demo for your project -->
 ## Conda - [**Cheatsheet**](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html)
 ### Environment
@@ -21,15 +21,27 @@ Simulates occupant behavior in a home by integrating 4 seperate model in the age
 
 `conda env create -f environment.yml`
 
-<!-- After you have written about your project, it is a good idea to have a demo/preview(**video/gif/screenshots** are good options) of your project so that people can know what to expect in your project. You could also add the demo in the previous section with the product description.
+## Input data
+In order to run the demo/example simulation, the following input files are required:
 
-Here is a random GIF as a placeholder.
+1. **ecobee's DyD data**: `sample_data1_stp_processed.h5` file is available in the `input_data` folder. Using an open loop system, model uses indoor and outdoor environment data to simulate overrides.
+2. **Occupancy transition matrix**: `transition_matrix.csv` is required to simulate an occupant's presence in an home using a 1st order markov chain model.
+3. **Habitual transition matrix**: `TM_habitual.csv` is required to simulation an occupant's habitual routine based override using a 1st order markov chain model.
+4. **Classification model**: `model_classification.pkl` is required to simulate the classification of discomfort based overrides per timestep.
+5. **Regression model**: `model_regressor.pkl` is required to simulate the time to override once the classification model classifies an override for a timestep.
 
-![Random GIF](https://media.giphy.com/media/ZVik7pBtu9dNS/giphy.gif)
+## Running the demo/example
+
+**&rarr; `example.ipynb`**: The notebook can be run in the [virtual environment](###Environment) created above. This is a demo of an occupant overriding controls for a day using an open-loop system.
+
+A successful simulation run should display a graphic similar to the one below. In this graphic, the spikes depict overrides. As an open-loop system is being used to simulate the indoor environment, the change in setpoint is followed by the changing the setpoint back to the value previous to the override.
+
+![Spikes are overrides](imgs/override_example.png "Simulation run example")
+
 
 # Table of contents
 
-After you have introduced your project, it is a good idea to add a **Table of contents** or **TOC** as **cool** people say it. This would make it easier for people to navigate through your README and find exactly what they are looking for.
+<!-- After you have introduced your project, it is a good idea to add a **Table of contents** or **TOC** as **cool** people say it. This would make it easier for people to navigate through your README and find exactly what they are looking for.
 
 Here is a sample TOC(*wow! such cool!*) that is actually the TOC for this README.
 
@@ -114,7 +126,7 @@ You could also add contact details for people to get in touch with you regarding
 
 Adding the license to README is a good practice so that people can easily refer to it.
 
-Make sure you have added a LICENSE file in your project folder. **Shortcut:** Click add new file in your root of your repo in GitHub --> Set file name to LICENSE --> GitHub shows LICENSE templates ---> Choose the one that best suits your project!
+Make sure you have added a LICENSE file in your project folder. **Shortcut:** Click add new file in your root of your repo in GitHub -> Set file name to LICENSE -> GitHub shows LICENSE templates -> Choose the one that best suits your project!
 
 I personally add the name of the license and provide a link to it like below.
 
@@ -136,6 +148,6 @@ Leave a star in GitHub, give a clap in Medium and share this guide if you found 
 **Now folks, the moment you've all been waiting for! The footer!**
 ***[Audible gasp]***
 
-<!-- Add the footer here -->
+<!-- Add the footer here ->
 
 ![Footer](https://github.com/navendu-pottekkat/awesome-readme/blob/master/fooooooter.png) -->
