@@ -32,7 +32,7 @@ In order to run the demo/example simulation, the following input files are requi
 
 ## Running the demo/example
 
-**&rarr; `example.ipynb`**: The notebook can be run in the [virtual environment](###Environment) created above. This is a demo of an occupant overriding controls for a day using an open-loop system.
+**&rarr; `example.ipynb`**: The notebook can be run in the [virtual environment](#Environment) created above. This is a demo of an occupant overriding controls for a day using an open-loop system.
 
 A successful simulation run should display a graphic similar to the one below. In this graphic, the spikes depict overrides. As an open-loop system is being used to simulate the indoor environment, the change in setpoint is followed by the changing the setpoint back to the value previous to the override.
 
