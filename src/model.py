@@ -2,7 +2,7 @@
 
 # Import packages
 import mesa
-import src.tools as om_tools
+import tools as om_tools
 
 # Occupant agent class
 class Occupant(mesa.Agent):
