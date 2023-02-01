@@ -2,6 +2,19 @@ import numpy as np
 # import matplotlib.pyplot as plt
 # import seaborn as sns
 
+def comfort_zone_theory(del_tin_tct, cz_threshold = 1.0):
+    """ Comfort zone theory for override prediction
+    """
+    if del_tin_tct > cz_threshold:
+        return True
+    else:
+        return False
+
+def frustration_theory(del_tin_tct, alpha=1, beta=1, prev_frustration=0,timestep_size=1):
+    """ Frustration theory for override prediction
+    """
+    return alpha * prev_frustration  + (beta *del_tin_tct)*timestep_size
+
 
 def Markov_occupancy_model(tp_matrix, sampling_time):
     """ Create a 1st order markov chain model that synthesizes occupancy schedule for the entire day
