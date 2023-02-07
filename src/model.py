@@ -41,11 +41,12 @@ class Occupant(mesa.Agent):
         self.discomfort_regres_model = model_regres
 
         # Simulation output container
-        self.output = {'T_stp_cool':None, 'T_stp_heat':None}
+        self.output = {'T_stp_cool':None, 'T_stp_heat':None,'override':False}
 
         print(f"Occupant created, ID: {unique_id}")
 
     def step(self) -> None:
+        self.output['override'] = False
         T_stp_cool, T_stp_heat = (self.current_env_features['T_stp_cool'], self.current_env_features['T_stp_heat'])
 
         """ 
@@ -113,8 +114,9 @@ class Occupant(mesa.Agent):
         if self.occupancy[self.model.timestep_day] and is_override:
             T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.T_CT, self.current_env_features['T_in'],\
                      self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
-        if self.model.units == 'F': self.output['T_stp_cool'], self.output['T_stp_heat'] = T_stp_cool, T_stp_heat
-        else: self.output['T_stp_cool'], self.output['T_stp_heat'] = om_tools.F_to_C(T_stp_cool), om_tools.F_to_C(T_stp_heat)
+
+        if self.model.units == 'F': self.output['T_stp_cool'], self.output['T_stp_heat'],self.output['override'] = T_stp_cool, T_stp_heat, True
+        else: self.output['T_stp_cool'], self.output['T_stp_heat'], self.output['override'] = om_tools.F_to_C(T_stp_cool), om_tools.F_to_C(T_stp_heat), True
         
 
 
