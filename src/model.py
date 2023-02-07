@@ -75,7 +75,7 @@ class Occupant(mesa.Agent):
 
             if self.follow_theory.upper() == 'CZT':
                 is_override = om_tools.comfort_zone_theory(self.current_env_features['T_in'] - self.T_CT, cz_threshold = self.cz_threshold)
-                
+
             elif self.follow_theory.upper() == 'TFT':
                 self.thermal_frus.append(om_tools.frustration_theory(del_tin_tct=self.current_env_features['T_in'] - self.T_CT, alpha=1, beta=1, prev_frustration=self.thermal_frus[-1], timestep_size=1))
                 if self.thermal_frus[-1] > self.tf_threshold:
@@ -102,22 +102,23 @@ class Occupant(mesa.Agent):
         """
         # If routine based habitual model predicts override and the occupant is present in the home:
         #  then decide the setpoint change
-        if self.habitual_schedule[self.model.timestep_day] and self.occupancy[self.model.timestep_day]:
+        if (self.habitual_schedule[self.model.timestep_day] or is_override) and self.occupancy[self.model.timestep_day]:
         
             T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.T_CT, self.current_env_features['T_in'],\
                  self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
+            self.output['override'] = True
 
         # if self.TTO == 0 and self.occupancy[self.model.timestep_day]:
         #     T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.occupant.T_CT, self.current_env_features['T_in'],\
         #          self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
         #     self.TTO = None
         
-        if self.occupancy[self.model.timestep_day] and is_override:
-            T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.T_CT, self.current_env_features['T_in'],\
-                     self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
+        # if self.occupancy[self.model.timestep_day] and is_override:
+        #     T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.T_CT, self.current_env_features['T_in'],\
+        #              self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
 
-        if self.model.units == 'F': self.output['T_stp_cool'], self.output['T_stp_heat'],self.output['override'] = T_stp_cool, T_stp_heat, True
-        else: self.output['T_stp_cool'], self.output['T_stp_heat'], self.output['override'] = om_tools.F_to_C(T_stp_cool), om_tools.F_to_C(T_stp_heat), True
+        if self.model.units == 'F': self.output['T_stp_cool'], self.output['T_stp_heat'] = T_stp_cool, T_stp_heat
+        else: self.output['T_stp_cool'], self.output['T_stp_heat'] = om_tools.F_to_C(T_stp_cool), om_tools.F_to_C(T_stp_heat)
         
 
 
