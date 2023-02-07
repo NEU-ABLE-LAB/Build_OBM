@@ -26,8 +26,8 @@ class Occupant(mesa.Agent):
         self.T_CT = 70
 
 
-        self.czt_threshold = 4 # degree F
-        self.tft_threshold = 50 # degree F minutes
+        self.cz_threshold = 4 # degree F
+        self.tf_threshold = 50 # degree F minutes
         self.follow_theory = discomfort_theory_name
         self.thermal_frus =[0]
         
@@ -74,10 +74,11 @@ class Occupant(mesa.Agent):
             self.current_env_features['mo'] = self.occupancy[self.model.timestep_day]
 
             if self.follow_theory.upper() == 'CZT':
-                is_override = om_tools.comfort_zone_theory(self.current_env_features['T_in'] - self.T_CT, czt_threshold = self.czt_threshold)
+                is_override = om_tools.comfort_zone_theory(self.current_env_features['T_in'] - self.T_CT, cz_threshold = self.cz_threshold)
+                
             elif self.follow_theory.upper() == 'TFT':
                 self.thermal_frus.append(om_tools.frustration_theory(del_tin_tct=self.current_env_features['T_in'] - self.T_CT, alpha=1, beta=1, prev_frustration=self.thermal_frus[-1], timestep_size=1))
-                if self.thermal_frus[-1] > self.frust_threshold:
+                if self.thermal_frus[-1] > self.tf_threshold:
                     is_override = True
 
 
