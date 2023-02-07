@@ -43,7 +43,7 @@ class Occupant(mesa.Agent):
         # Simulation output container
         self.output = {'T_stp_cool':None, 'T_stp_heat':None,'override':False}
 
-        print(f"Occupant created, ID: {unique_id}")
+        print(f"Occupant created,\nID: {unique_id}\nDiscomfort theory: {self.follow_theory}")
 
     def step(self) -> None:
         self.output['override'] = False
@@ -124,7 +124,7 @@ class Occupant(mesa.Agent):
 
 class OccupantModel(mesa.Model):
     """ Occupant model: Contains model simulation information required """
-    def __init__(self, units, N_homes,N_occupants_in_home, sampling_frequency, TM_occupancy, TM_habitual, model_class, model_regres) -> None:
+    def __init__(self, units, N_homes,N_occupants_in_home, sampling_frequency, TM_occupancy, TM_habitual, model_class, model_regres,discomfort_theory_name='czt') -> None:
         super().__init__()
         # Temperature units
         self.units = units
@@ -151,7 +151,7 @@ class OccupantModel(mesa.Model):
                 # Create occupant
                 occup = Occupant(unique_id=home_ID + occup_ID, model=self, home_ID=home_ID, \
                     TM_occupancy = TM_occupancy, TM_habitual = TM_habitual, \
-                        model_class = model_class, model_regres=model_regres)
+                        model_class = model_class, model_regres=model_regres,discomfort_theory_name=discomfort_theory_name)
                 # Add occupant to the scheduler
                 self.schedule.add(occup)
 
