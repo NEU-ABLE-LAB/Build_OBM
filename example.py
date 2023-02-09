@@ -24,7 +24,7 @@ Occup_model = OccupantModel(units='F', N_homes= 1, N_occupants_in_home=1,
                             sampling_frequency=sim_sampling_frequency,
                             TM_occupancy = TM_occupancy, TM_habitual = TM_habitual,
                             model_class = model_classification,
-                            model_regres=model_regressor )
+                            model_regres=model_regressor, comfort_temperature=72, discomfort_theory_name='tft', threshold=50)
 
 ## Simulate the model for a day
 t = []

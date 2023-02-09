@@ -5,15 +5,25 @@ import numpy as np
 def comfort_zone_theory(del_tin_tct, cz_threshold = 1.0):
     """ Comfort zone theory for override prediction
     """
+    override = False
     if del_tin_tct > cz_threshold:
-        return True
+        override = True
     else:
-        return False
+        override = False
+    return override
 
-def frustration_theory(del_tin_tct, alpha=1, beta=1, prev_frustration=0,timestep_size=1):
+def frustration_theory(del_tin_tct, alpha=1, beta=1, thermal_frustration=[0], tf_threshold=100):
     """ Frustration theory for override prediction
     """
-    return alpha * prev_frustration  + (beta *del_tin_tct)*timestep_size
+    override = False
+    thermal_frustration.append(alpha*thermal_frustration[-1]+beta*del_tin_tct)
+    
+    if thermal_frustration[-1] > tf_threshold:
+        override = True
+    else:
+        override = False
+    return override
+    
 
 
 def Markov_occupancy_model(tp_matrix, sampling_time):
