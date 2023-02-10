@@ -19,7 +19,10 @@ class Occupant(mesa.Agent):
         self.recent_stp_change = False # Flag to show if the change in setpoint was implemented by the occupant
         self.occupancy_tp_matrix = TM_occupancy # Occupancy Model - Transition matrix to simulate occupant's presence
         self.occupancy = [] # Occupancy Model - Place holder variable to contain simulated occupancy for a simulation's day
-        self.T_CT = comfort_temperature # Track comfort temperature
+        if self.units == 'C':
+            self.T_CT = om_tools.C_to_F(comfort_temperature) # Track comfort temperature
+        else:
+            self.T_CT = comfort_temperature
         self.override_theory = discomfort_theory_name.upper() # Override theory name
         self.last_override_datetime = start_datetime # Time since the last override
 
