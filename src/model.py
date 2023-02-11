@@ -10,7 +10,7 @@ class Occupant(mesa.Agent):
     """ An occupant agent: Contains information specific to an occupant """
     def __init__(self, unique_id: int, model, home_ID,units,
      TM_occupancy , TM_habitual, model_class, model_regres,
-      comfort_temperature, discomfort_theory_name='czt',threshold=4,TFT_alpha=1,TFT_beta=1,start_datetime=om_tools.datetime.datetime(1996,3,30,0,0)) -> None:
+      comfort_temperature, discomfort_theory_name='czt',threshold={'UL':4,'LL':-4},TFT_alpha=1,TFT_beta=1,start_datetime=om_tools.datetime.datetime(1996,3,30,0,0)) -> None:
         super().__init__(unique_id, model)
         
         self.home_ID = home_ID # Occupant's residence
@@ -157,7 +157,9 @@ class OccupantModel(mesa.Model):
 
     Uses the Occupant class to simulate occupants in a home
     '''
-    def __init__(self, units, N_homes,N_occupants_in_home, sampling_frequency, TM_occupancy, TM_habitual, model_class, model_regres, comfort_temperature, discomfort_theory_name, threshold, TFT_alpha,TFT_beta,start_datetime) -> None:
+    def __init__(self, units, N_homes,N_occupants_in_home, sampling_frequency,
+     TM_occupancy, TM_habitual, model_class, model_regres, comfort_temperature,
+      discomfort_theory_name, threshold, TFT_alpha,TFT_beta,start_datetime) -> None:
         '''
         Intialize the model for occupant(s) in home(s)
         '''
