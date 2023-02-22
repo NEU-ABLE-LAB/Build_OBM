@@ -134,6 +134,9 @@ class Occupant(mesa.Agent):
                 # if self.occupancy[self.model.timestep_day] and is_override:
                 #     T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.T_CT, self.current_env_features['T_in'],\
                 #              self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
+        else:
+            self.thermal_frustration =[0] # Reset thermal frustration if the occupant is not present in the home
+
 
         if self.units == 'C': self.output['T_stp_cool'], self.output['T_stp_heat'] = om_tools.F_to_C(T_stp_cool), om_tools.F_to_C(T_stp_heat)
         else: self.output['T_stp_cool'], self.output['T_stp_heat'] = T_stp_cool, T_stp_heat
