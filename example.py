@@ -21,11 +21,8 @@ for file in data_files:
 models = {}
 for model_file in model_files:
     models[model_file.stem] = om_tools.pickle.load(open(model_file,'rb'))
-# model_regressor = pickle.load(open('input_data/model_regressor.pkl','rb'))
-# model_classification = pickle.load(open('input_data/model_classification.pkl','rb'))
 
 start_datetime = om_tools.datetime.datetime(2019, 1, 1, 0, 0, 0)
-
 ## Initiate the occupant model
 sim_sampling_frequency = 5 # minutes -> cannot exceed this interval as the TM's are not available for a lower frequency
 # TODO: To add raise value error if the value is higher than 5 minutes
@@ -33,7 +30,7 @@ sim_sampling_frequency = 5 # minutes -> cannot exceed this interval as the TM's 
 Occup_model = OccupantModel(units='F', N_homes= 1, N_occupants_in_home=1,
                             sampling_frequency=sim_sampling_frequency, models = models,
                             init_data = init_data, comfort_temperature=68,
-                             discomfort_theory_name='tft', threshold=50,TFT_alpha=1,TFT_beta=1,start_datetime=start_datetime)
+                             discomfort_theory_name='tft', threshold={'UL': 50, 'LL': -50},TFT_alpha=1,TFT_beta=1,start_datetime=start_datetime)
 
 ## Simulate the model for a day
 t = []
