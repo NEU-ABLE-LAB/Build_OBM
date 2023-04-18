@@ -6,23 +6,27 @@ import seaborn as sns
 import pathlib
 import datetime
 
-def comfort_zone_theory(del_tin_tct, cz_threshold = 1.0):
+def comfort_zone_theory(del_tin_tct, cz_threshold = {'UL':4,'LL':-4}):
     """ Comfort zone theory for override prediction
     """
     override = False
-    if del_tin_tct > cz_threshold:
+    if del_tin_tct > cz_threshold['UL']:
+        override = True
+    elif del_tin_tct < cz_threshold['LL']:
         override = True
     else:
         override = False
     return override
 
-def frustration_theory(del_tin_tct, alpha=1, beta=1, thermal_frustration=[0], tf_threshold=100):
+def frustration_theory(del_tin_tct, alpha=1, beta=1, thermal_frustration=[0], tf_threshold={'UL':4,'LL':-4}):
     """ Frustration theory for override prediction
     """
     override = False
     thermal_frustration.append(alpha*thermal_frustration[-1]+beta*del_tin_tct)
     
-    if thermal_frustration[-1] > tf_threshold:
+    if thermal_frustration[-1] > tf_threshold['UL']:
+        override = True
+    elif thermal_frustration[-1] < tf_threshold['LL']:
         override = True
     else:
         override = False

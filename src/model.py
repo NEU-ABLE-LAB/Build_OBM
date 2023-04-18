@@ -9,8 +9,7 @@ import tools as om_tools
 class Occupant(mesa.Agent):
     """ An occupant agent: Contains information specific to an occupant """
     def __init__(self, unique_id: int, model, home_ID,units, init_data, models,
-                comfort_temperature, discomfort_theory_name='czt',
-                threshold=4,TFT_alpha=1,TFT_beta=1,start_datetime=om_tools.datetime.datetime(1996,3,30,0,0)) -> None:
+                comfort_temperature, discomfort_theory_name='czt',threshold={'UL':4,'LL':-4},TFT_alpha=1,TFT_beta=1,start_datetime=om_tools.datetime.datetime(1996,3,30,0,0)) -> None:
         super().__init__(unique_id, model)
         
         self.home_ID = home_ID # Occupant's residence
@@ -20,7 +19,10 @@ class Occupant(mesa.Agent):
         self.init_data = init_data # Initial data dictionary containing TM's and PDFs/PMFs
         self.occupancy = None # Occupancy Model - Place holder variable to contain simulated occupancy for a simulation's day
         self.routine_msc_schedule = None # Routine Model - Place holder variable to contain simulated routine for a simulation's day
-        self.T_CT = comfort_temperature # Track comfort temperature
+        if self.units == 'C':
+            self.T_CT = om_tools.C_to_F(comfort_temperature) # Track comfort temperature
+        else:
+            self.T_CT = comfort_temperature
         self.override_theory = discomfort_theory_name.upper() # Override theory name
         self.last_override_datetime = start_datetime # Time since the last override
 
@@ -125,14 +127,16 @@ class Occupant(mesa.Agent):
                 self.output['Discomfort override'] = True
                 self.last_override_datetime =  self.current_env_features['DateTime'] # Update the last override time
 
-            # if self.TTO == 0 and self.occupancy[self.model.timestep_day]:
-            #     T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.occupant.T_CT, self.current_env_features['T_in'],\
-            #          self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
-            #     self.TTO = None
-            
-            # if self.occupancy[self.model.timestep_day] and is_override:
-            #     T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.T_CT, self.current_env_features['T_in'],\
-            #              self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
+                # if self.TTO == 0 and self.occupancy[self.model.timestep_day]:
+                #     T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.occupant.T_CT, self.current_env_features['T_in'],\
+                #          self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
+                #     self.TTO = None
+                
+                # if self.occupancy[self.model.timestep_day] and is_override:
+                #     T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.T_CT, self.current_env_features['T_in'],\
+                #              self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
+        else:
+            self.thermal_frustration =[0] # Reset thermal frustration if the occupant is not present in the home
 
         if self.units == 'C': self.output['T_stp_cool'], self.output['T_stp_heat'] = om_tools.F_to_C(T_stp_cool), om_tools.F_to_C(T_stp_heat)
         else: self.output['T_stp_cool'], self.output['T_stp_heat'] = T_stp_cool, T_stp_heat
@@ -156,7 +160,7 @@ class OccupantModel(mesa.Model):
 
     Uses the Occupant class to simulate occupants in a home
     '''
-    def __init__(self, units, N_homes,N_occupants_in_home, sampling_frequency, models, init_data, comfort_temperature, discomfort_theory_name, threshold, TFT_alpha,TFT_beta,start_datetime) -> None:
+    def __init__(self, units, N_homes,N_occupants_in_home, sampling_frequency,  models, init_data,  comfort_temperature, discomfort_theory_name, threshold, TFT_alpha,TFT_beta,start_datetime) -> None:
         '''
         Intialize the model for occupant(s) in home(s)
         '''
