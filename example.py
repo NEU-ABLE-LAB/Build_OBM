@@ -40,8 +40,9 @@ mo = []
 del_t = []
 tf =[]
 current_datetime = start_datetime
+total_timesteps = int((1440*20)/sim_sampling_frequency)
 # Simulate the occupant model for specific timesteps
-for timeStepN in range(0,int((1440)/sim_sampling_frequency)):
+for timeStepN in range(0,total_timesteps):
     t.append(timeStepN)  # For plotting
     if timeStepN > 0:
         current_datetime = current_datetime + om_tools.datetime.timedelta(minutes=sim_sampling_frequency)
@@ -67,7 +68,7 @@ om_tools.sns.set()
 fig, axes = om_tools.plt.subplots(3)
 om_tools.sns.lineplot(x=t,y=T_stp_heat,color='orange',ax=axes[0])
 om_tools.sns.lineplot(x=t,y=T_stp_cool,color='blue',ax=axes[0])
-om_tools.sns.lineplot(x=t,y=df.loc[0:287,'T_ctrl'],color='green',ax=axes[0])
+om_tools.sns.lineplot(x=t,y=df.loc[0:total_timesteps-1,'T_ctrl'],color='green',ax=axes[0])
 om_tools.sns.lineplot(x=t,y=mo,color='blue',ax=axes[1])
 om_tools.sns.lineplot(x=t,y=tf,color='blue',ax=axes[2])
 

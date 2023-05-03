@@ -31,7 +31,7 @@ def frustration_theory(del_tin_tct, alpha=1, beta=1, thermal_frustration=[0], tf
     else:
         override = False
     return override
-\
+
 def Markov_occupancy_model(tp_matrix, sampling_time,current_datetime):
     """ Generate a 1st order markov chain model that synthesizes occupancy schedule for the entire day
     Created using transition matrices discussed in the paper: https://doi.org/10.1016/j.enbuild.2008.02.006
@@ -46,7 +46,8 @@ def Markov_occupancy_model(tp_matrix, sampling_time,current_datetime):
         # Set state based on current timestep of the day
         if timestep == 0:
             # Start state is randomly selected
-            start_state = np.random.choice([False, True])
+            start_state = True
+            # start_state = np.random.choice([False, True])
             current_state = start_state
         else:
             current_state = occupancy[timestep-1][0]
@@ -185,7 +186,7 @@ def realize_routine_msc(init_data, occupancy_schedule, current_datetime):
     N_mscpd = 2 # For testing purposes, # TODO: remove this line
     if N_mscpd == 2:
         # Realize the time of first msc i.e. t_msc_1
-        t_msc_1=None
+        t_msc_1 = None
         while t_msc_1 not in true_occupancy_dt:
             data = init_data[label + '_' + str(N_mscpd) + 'mscpd_tod1']
             tod_1 = data['tod'].values
@@ -208,21 +209,29 @@ def realize_routine_msc(init_data, occupancy_schedule, current_datetime):
         data = init_data[label + '_' + str(N_mscpd) + 'mscpd_'+ season + '_DOO1_'+ type_1 +'_type']
         domscs_1 = np.array(data.columns[1:]).astype(int)
         prob = np.array(data.loc[data['tod'] == str(t_msc_1.time())].values[0][1:]).astype(float)
-        if np.sum(prob) != 1:
+        if np.sum(prob) == 0:
+            domsc_1 = np.random.choice(domscs_1)
+        elif np.sum(prob) != 1:
             diff = abs(1 - np.sum(prob))
             prob[0] = prob[0] + diff
-        domsc_1 = np.random.choice(domscs_1, p = prob)
+            domsc_1 = np.random.choice(domscs_1, p = prob)
+        else:
+            domsc_1 = np.random.choice(domscs_1, p = prob)
 
         # Realize the time of second msc i.e. t_msc_2 given the time of first msc i.e., t_msc_1
         t_msc_2 = None
+        data = init_data[label + '_' + str(N_mscpd) + 'mscpd_tod2_tod1']
+        tod_2 = pd.to_datetime([datetime.datetime.combine(current_datetime.date(),pd.to_datetime(item, format='%H:%M:%S').time()) for item in data['tod'].values])
         while t_msc_2 not in true_occupancy_dt:
-            data = init_data[label + '_' + str(N_mscpd) + 'mscpd_tod2_tod1']
-            tod_2 = data['tod']
             prob = np.array(data.loc[data.tod == str(t_msc_1.time())].values[0][1:]).astype(float)
-            if np.sum(prob) != 1:
+            if np.sum(prob) == 0:
+                t_msc_2 = pd.to_datetime(np.random.choice(tod_2[tod_2 > t_msc_1]))
+            elif np.sum(prob) != 1:
                 diff = abs(1 - np.sum(prob))
-                prob[0] = prob[0] + diff
-            t_msc_2 = datetime.datetime.combine(current_datetime.date(),pd.to_datetime(np.random.choice(tod_2, p = prob), format='%H:%M:%S').time())
+                prob[-1] = prob[-1] + diff
+                t_msc_2 = pd.to_datetime(np.random.choice(tod_2,p =prob))
+            else:
+                t_msc_2 = pd.to_datetime(np.random.choice(tod_2,p =prob))
 
         # Realize the type of second msc i.e. type_msc_2 given the type of first msc i.e. type_1
         data = init_data[label + '_' + str(N_mscpd) + 'mscpd_type2_type1_' + type_1]
