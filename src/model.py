@@ -124,6 +124,8 @@ class Occupant(mesa.Agent):
             
                 T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.T_CT, self.current_env_features['T_in'],\
                     self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
+                if T_stp_heat > T_stp_cool:
+                    T_stp_cool = T_stp_heat + 2
                 self.output['Discomfort override'] = True
                 self.last_override_datetime =  self.current_env_features['DateTime'] # Update the last override time
 
