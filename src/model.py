@@ -4,14 +4,14 @@
 import mesa
 import tools as om_tools
 
-
 # Occupant agent class
 class Occupant(mesa.Agent):
     """ An occupant agent: Contains information specific to an occupant """
     def __init__(self, unique_id: int, model, home_ID,units, init_data, models,
-                comfort_temperature, discomfort_theory_name='czt',threshold={'UL':4,'LL':-4},TFT_alpha=1,TFT_beta=1,start_datetime=om_tools.datetime.datetime(1996,3,30,0,0)) -> None:
-        super().__init__(unique_id, model)
+                comfort_temperature, discomfort_theory_name='czt',threshold={'UL':4,'LL':-4},
+                TFT_alpha=1,TFT_beta=1,start_datetime=om_tools.datetime.datetime(1996,3,30,0,0)) -> None:
         
+        super().__init__(unique_id, model)
         self.home_ID = home_ID # Occupant's residence
         self.units = units # Temperature units followed by the occupant
         self.current_env_features = None # Place holder variable to contain environment info for each timestep
@@ -39,154 +39,166 @@ class Occupant(mesa.Agent):
         self.discomfort_regres_model = models['model_regressor']
 
         # Simulation output container
-        self.output = {'Motion':None, 'T_stp_cool':None, 'T_stp_heat':None, 'Thermal Frustration': None, 'Comfort delta': None, 'Habitual override':False, 'Discomfort override':False}
+        self.output = {'Motion':None, 'T_stp_cool':None, 'T_stp_heat':None, 'Thermal Frustration': None, 'Comfort Delta': None, 'Habitual override':False, 'Discomfort override':False}
         print(f"Occupant created,\nID: {unique_id}\nDiscomfort theory: {self.override_theory}")
 
     def step(self) -> None:
         print(f"Occupant idN: {self.unique_id} simulation started")
         season = om_tools.get_season(self.current_env_features['DateTime'])
-        if season != 'heat' or season != 'cool':
+        if season == 'heat' or season == 'cool':
+            # Initialize the output dictionary to avoid errors
+            self.output['Habitual override'] = False
+            self.output['Discomfort override'] = False
+
+            # Send simulated indoor env data to the occupant agent
+            if self.units == 'C':
+                vars_2_convert = [key for key in self.current_env_features.keys() if 'T_' in key]
+                for var in vars_2_convert:
+                        self.current_env_features[var] = om_tools.C_to_F(self.current_env_features[var])
+            """ 
+            +-------------------+
+            | Model predictions |
+            +-------------------+
+            """
+            # Generate data for the day at midnight
+            if (self.current_env_features['DateTime'].hour == 0) & (self.current_env_features['DateTime'].minute == 0):
+                # Generate occupancy data at midnight for the next day
+                self.occupancy = om_tools.Markov_occupancy_model(
+                                                                self.init_data['occ_transition_matrix'],
+                                                                sampling_time = self.model.sampling_frequency,
+                                                                current_datetime=self.current_env_features['DateTime']
+                                                                )
+
+                # Generate habitual override data at midnight for the next day
+                self.routine_msc_schedule = om_tools.realize_routine_msc(
+                                                                        init_data=self.init_data,
+                                                                        occupancy_schedule= self.occupancy,
+                                                                        current_datetime=self.current_env_features['DateTime']
+                                                                        )
+
+            # Get current heating and cooling setpoint
+            T_stp_cool, T_stp_heat = (self.current_env_features['T_stp_cool'], self.current_env_features['T_stp_heat'])
+            
+            # The occupant only feels discomfort if they are present in the home
+            if self.occupancy.loc[self.occupancy.datetime.values == self.current_env_features['DateTime'],'occupancy'].values[0]:
+            
+                # Discomfort Model:
+                # Prepare input data for ML
+                self.current_env_features['mo'] = self.occupancy.loc[
+                                                                    self.occupancy.datetime == self.current_env_features['DateTime'],'occupancy'
+                                                                    ].values[0]
+
+                if self.override_theory == 'CZT':
+                    discomfort_override = om_tools.comfort_zone_theory(
+                                                                        del_tin_tct = self.current_env_features['T_in'] - self.T_CT,
+                                                                        cz_threshold = self.cz_threshold
+                                                                        )
+
+                elif self.override_theory == 'TFT':
+                    discomfort_override = om_tools.frustration_theory(
+                                                                        del_tin_tct=self.current_env_features['T_in'] - self.T_CT,
+                                                                        alpha=self.TFT_alpha, beta=self.TFT_beta,
+                                                                        thermal_frustration=self.thermal_frustration, 
+                                                                        tf_threshold=self.tf_threshold
+                                                                        )
+
+                # # Decrease the timer per timestep if a TTO value exists
+                # if self.TTO == 0:
+                #     raise ValueError('Check TTO')
+                # if self.TTO:
+                #     self.TTO =- 1
+                
+                # # Classify override using the random forest classification model
+                # is_override = self.discomfort_class_model.predict([list(self.current_env_features.values())])[0]
+                
+                # if is_override:
+                #     # Estimate time to override for the classified override using the random forest regressor model
+                #     self.TTO = int(om_tools.np.round(self.discomfort_regres_model.predict([list(self.current_env_features.values())])))
+
+                """ 
+                +---------------------------+
+                | Override decision process |
+                +---------------------------+
+                """
+                            
+                # If routine based habitual model predicts override and the occupant is present in the home: then decide the setpoint change
+                if self.current_env_features['DateTime'] in self.routine_msc_schedule.datetime.values:
+
+                    DOMSC_cool = self.routine_msc_schedule.loc[
+                                                                self.routine_msc_schedule.datetime == self.current_env_features['DateTime'],
+                                                                ['delT_cool','delT_heat']
+                                                                ].values[0][0]
+                    DOMSC_heat = self.routine_msc_schedule.loc[
+                                                                self.routine_msc_schedule.datetime == self.current_env_features['DateTime'],
+                                                                ['delT_cool','delT_heat']
+                                                                ].values[0][1]
+                
+                    T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(
+                                                                            DOMSC_cool,DOMSC_heat,\
+                                                                            self.current_env_features['T_stp_heat'],
+                                                                            self.current_env_features['T_stp_cool'],
+                                                                            current_datetime= self.current_env_features['DateTime']
+                                                                            )
+                    self.last_override_datetime =  self.current_env_features['DateTime'] # Update the last override time
+                    self.output['Habitual override'] = True
+                    print('Occupant decides to override: Routine override')
+
+                elif discomfort_override:
+                    # Decide the setpoint change
+                    if self.T_CT < self.current_env_features['T_in']:
+                        # Occupant feels hot, decrease both the setpoints
+                        del_T_MSC = self.T_CT - self.current_env_features['T_in']
+                        DOMSC_cool = del_T_MSC
+                        DOMSC_heat = del_T_MSC
+                    else:
+                        # Occupant feels cold, increase both the setpoints
+                        del_T_MSC = self.T_CT - self.current_env_features['T_in']
+                        DOMSC_cool = del_T_MSC
+                        DOMSC_heat = del_T_MSC
+
+                    T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(
+                                                                            DOMSC_cool,DOMSC_heat,\
+                                                                            self.current_env_features['T_stp_heat'],
+                                                                            self.current_env_features['T_stp_cool'],
+                                                                            current_datetime= self.current_env_features['DateTime']
+                                                                            )
+                    self.last_override_datetime =  self.current_env_features['DateTime'] # Update the last override time
+                    self.output['Discomfort override'] = True
+                    print('Occupant decides to override: Discomfort override')
+
+                    # if self.TTO == 0 and self.occupancy[self.model.timestep_day]:
+                    #     T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.occupant.T_CT, self.current_env_features['T_in'],\
+                    #          self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
+                    #     self.TTO = None
+                    
+                    # if self.occupancy[self.model.timestep_day] and is_override:
+                    #     T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.T_CT, self.current_env_features['T_in'],\
+                    #              self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
+            else:
+                self.thermal_frustration =[0] # Reset thermal frustration if the occupant is not present in the home
+
+            if self.units == 'C':
+                self.output['T_stp_cool'] = om_tools.F_to_C(T_stp_cool)
+                self.output['T_stp_heat'] = om_tools.F_to_C(T_stp_heat)
+            else: 
+                self.output['T_stp_cool'] = T_stp_cool
+                self.output['T_stp_heat'] = T_stp_heat
+            
+            self.output['Motion'] = self.occupancy.loc[
+                                                        self.occupancy.datetime == self.current_env_features['DateTime'],
+                                                        'occupancy'
+                                                        ].values[0]
+            self.output['Thermal Frustration'] = self.thermal_frustration[-1]
+            self.output['Comfort Delta'] = self.current_env_features['T_in'] - self.T_CT
+        else:
             self.output = {'Motion':None,
                            'T_stp_cool':self.current_env_features['T_stp_cool'],
                             'T_stp_heat':self.current_env_features['T_stp_heat'],
                             'Thermal Frustration': 0,
-                            'Comfort delta': None,
+                            'Comfort Delta': None,
                             'Habitual override':False,
                             'Discomfort override':False}
             pass
-
-        # Initialize the output dictionary to avoid errors
-        self.output['Habitual override'] = False
-        self.output['Discomfort override'] = False
-
-        # Send simulated indoor env data to the occupant agent
-        if self.units == 'C':
-            vars_2_convert = [key for key in self.current_env_features.keys() if 'T_' in key]
-            for var in vars_2_convert:
-                    self.current_env_features[var] = om_tools.C_to_F(self.current_env_features[var])
-        """ 
-        +-------------------+
-        | Model predictions |
-        +-------------------+
-        """
-        # Generate data for the day at midnight
-        if (self.current_env_features['DateTime'].hour == 0) & (self.current_env_features['DateTime'].minute == 0):
-            # Generate occupancy data at midnight for the next day
-            self.occupancy = om_tools.Markov_occupancy_model(
-                                                            self.init_data['occ_transition_matrix'],
-                                                            sampling_time = self.model.sampling_frequency,
-                                                            current_datetime=self.current_env_features['DateTime']
-                                                            )
-
-            # Generate habitual override data at midnight for the next day
-            self.routine_msc_schedule = om_tools.realize_routine_msc(
-                                                                    init_data=self.init_data,
-                                                                    occupancy_schedule= self.occupancy,
-                                                                    current_datetime=self.current_env_features['DateTime']
-                                                                    )
-
-        # Get current heating and cooling setpoint
-        T_stp_cool, T_stp_heat = (self.current_env_features['T_stp_cool'], self.current_env_features['T_stp_heat'])
-        
-        # The occupant only feels discomfort if they are present in the home
-        if self.occupancy.loc[self.occupancy.datetime.values == self.current_env_features['DateTime'],'occupancy'].values[0]:
-        
-            # Discomfort Model:
-            # Prepare input data for ML
-            self.current_env_features['mo'] = self.occupancy.loc[
-                                                                self.occupancy.datetime == self.current_env_features['DateTime'],'occupancy'
-                                                                ].values[0]
-
-            if self.override_theory == 'CZT':
-                discomfort_override = om_tools.comfort_zone_theory(
-                                                                    del_tin_tct = self.current_env_features['T_in'] - self.T_CT,
-                                                                    cz_threshold = self.cz_threshold
-                                                                    )
-
-            elif self.override_theory == 'TFT':
-                discomfort_override = om_tools.frustration_theory(
-                                                                    del_tin_tct=self.current_env_features['T_in'] - self.T_CT,
-                                                                    alpha=self.TFT_alpha, beta=self.TFT_beta,
-                                                                    thermal_frustration=self.thermal_frustration, 
-                                                                    tf_threshold=self.tf_threshold
-                                                                    )
-
-            # # Decrease the timer per timestep if a TTO value exists
-            # if self.TTO == 0:
-            #     raise ValueError('Check TTO')
-            # if self.TTO:
-            #     self.TTO =- 1
-            
-            # # Classify override using the random forest classification model
-            # is_override = self.discomfort_class_model.predict([list(self.current_env_features.values())])[0]
-            
-            # if is_override:
-            #     # Estimate time to override for the classified override using the random forest regressor model
-            #     self.TTO = int(om_tools.np.round(self.discomfort_regres_model.predict([list(self.current_env_features.values())])))
-
-            """ 
-            +---------------------------+
-            | Override decision process |
-            +---------------------------+
-            """
-                        
-            # If routine based habitual model predicts override and the occupant is present in the home: then decide the setpoint change
-            if self.current_env_features['DateTime'] in self.routine_msc_schedule.datetime.values:
-
-                DOMSC_cool = self.routine_msc_schedule.loc[
-                                                            self.routine_msc_schedule.datetime == self.current_env_features['DateTime'],
-                                                            ['delT_cool','delT_heat']
-                                                            ].values[0][0]
-                DOMSC_heat = self.routine_msc_schedule.loc[
-                                                            self.routine_msc_schedule.datetime == self.current_env_features['DateTime'],
-                                                            ['delT_cool','delT_heat']
-                                                            ].values[0][1]
-            
-                T_stp_cool, T_stp_heat = T_stp_cool + DOMSC_cool, T_stp_heat + DOMSC_heat
-
-                T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(DOMSC_cool,DOMSC_heat,\
-                    self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'],current_datetime= self.current_env_features['DateTime'])
-                self.last_override_datetime =  self.current_env_features['DateTime'] # Update the last override time
-                self.output['Habitual override'] = True
-                print('Occupant decides to override: Habitual override')
-
-            elif discomfort_override:
-                # Decide the setpoint change
-                if self.T_CT < self.current_env_features['T_in']:
-                    # Occupant feels hot, decrease both the setpoints
-                    del_T_MSC = T_stp_cool - self.T_CT
-                    DOMSC_cool = del_T_MSC
-                    DOMSC_heat = del_T_MSC
-                else:
-                    # Occupant feels cold, increase both the setpoints
-                    del_T_MSC = T_stp_heat - self.T_CT
-                    DOMSC_cool = del_T_MSC
-                    DOMSC_heat = del_T_MSC
-
-                T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(DOMSC_cool,DOMSC_heat,\
-                    self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'],current_datetime= self.current_env_features['DateTime'])
-                self.last_override_datetime =  self.current_env_features['DateTime'] # Update the last override time
-                self.output['Discomfort override'] = True
-                print('Occupant decides to override: discomfort override')
-
-                # if self.TTO == 0 and self.occupancy[self.model.timestep_day]:
-                #     T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.occupant.T_CT, self.current_env_features['T_in'],\
-                #          self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
-                #     self.TTO = None
-                
-                # if self.occupancy[self.model.timestep_day] and is_override:
-                #     T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.T_CT, self.current_env_features['T_in'],\
-                #              self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
-        else:
-            self.thermal_frustration =[0] # Reset thermal frustration if the occupant is not present in the home
-
-        if self.units == 'C': self.output['T_stp_cool'], self.output['T_stp_heat'] = om_tools.F_to_C(T_stp_cool), om_tools.F_to_C(T_stp_heat)
-        else: self.output['T_stp_cool'], self.output['T_stp_heat'] = T_stp_cool, T_stp_heat
-        
-        self.output['Motion'] = self.occupancy.loc[self.occupancy.datetime == self.current_env_features['DateTime'],'occupancy'].values[0]
-        self.output['Thermal Frustration'] = self.thermal_frustration[-1]
-        self.output['Comfort Delta'] = self.current_env_features['T_in'] - self.T_CT
-        
         print(f"Occupant idN: {self.unique_id} simulation completed")
 
 class OccupantModel(mesa.Model):

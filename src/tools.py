@@ -411,7 +411,7 @@ def update_simulation_timestep(model):
 
 def C_to_F(T):
     # Convert temperature from Celsius to Fahrenheit
-    return (T * 9/5) + 32
+    return round((T * 9/5) + 32)
 def F_to_C(T):
     # Convert temperature from Fahrenheit to Celsius
-    return (T - 32) * 5/9
+    return round((T - 32) * 5/9)
