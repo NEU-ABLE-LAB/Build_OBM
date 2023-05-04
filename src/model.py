@@ -155,16 +155,16 @@ class Occupant(mesa.Agent):
                         del_T_MSC = self.T_CT - self.current_env_features['T_in']
                         DOMSC_cool = del_T_MSC
                         DOMSC_heat = del_T_MSC
-
-                    T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(
-                                                                            DOMSC_cool,DOMSC_heat,\
-                                                                            self.current_env_features['T_stp_heat'],
-                                                                            self.current_env_features['T_stp_cool'],
-                                                                            current_datetime= self.current_env_features['DateTime']
-                                                                            )
-                    self.last_override_datetime =  self.current_env_features['DateTime'] # Update the last override time
-                    self.output['Discomfort override'] = True
-                    print('Occupant decides to override: Discomfort override')
+                    if (self.current_env_features['DateTime'] - self.last_override_datetime).seconds > 1200:
+                        T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(
+                                                                                DOMSC_cool,DOMSC_heat,\
+                                                                                self.current_env_features['T_stp_heat'],
+                                                                                self.current_env_features['T_stp_cool'],
+                                                                                current_datetime= self.current_env_features['DateTime']
+                                                                                )
+                        self.last_override_datetime =  self.current_env_features['DateTime'] # Update the last override time
+                        self.output['Discomfort override'] = True
+                        print('Occupant decides to override: Discomfort override')
 
                     # if self.TTO == 0 and self.occupancy[self.model.timestep_day]:
                     #     T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.occupant.T_CT, self.current_env_features['T_in'],\
