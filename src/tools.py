@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pathlib
 import datetime
+import warnings
+
 
 def comfort_zone_theory(del_tin_tct, cz_threshold = {'UL':4,'LL':-4}):
     """ Comfort zone theory for override prediction
@@ -17,6 +19,20 @@ def comfort_zone_theory(del_tin_tct, cz_threshold = {'UL':4,'LL':-4}):
     else:
         override = False
     return override
+
+def check_setpoints(T_stp_cool, T_stp_heat, current_datetime):
+    """
+    Cooling setpoint should always be greater than the heating setpoint. 
+    If not, based on the season, the setpoints are adjusted for energy intensive overrides.
+    """    
+    if T_stp_cool < T_stp_heat:
+        warnings.warn("Recommended cooling setpoint is less than the heating setpoint")
+        season = get_season(current_datetime)
+        if season == 'cool':
+            T_stp_heat = T_stp_cool - 2
+        elif season == 'heat':
+            T_stp_cool = T_stp_heat + 2
+    return T_stp_cool, T_stp_heat
 
 def frustration_theory(del_tin_tct, alpha=1, beta=1, thermal_frustration=[0], tf_threshold={'UL':4,'LL':-4}):
     """ Frustration theory for override prediction
@@ -363,25 +379,14 @@ def Markov_2nd_order_habitual_model(TM,sampling_time,current_datetime):
     sampled_override_schedule = [y for x in override_schedule for y in x]
     return sampled_override_schedule
 
-def decide_heat_cool_stp(T_CT, T_in, T_stp_heat, T_stp_cool):
+def decide_heat_cool_stp(DOMSC_cool, DOMSC_heat, T_stp_heat, T_stp_cool,current_datetime):
     """ Decide the change in setpoint based on indoor temperature difference from comfort temperature """
-    print('Occupant decides to override: Discomfort override')
-    print(f"Current heating setpoint: {T_stp_heat}")
-    print(f"Current cooling setpoint: {T_stp_cool}")
+    print('Occupant decides to override the thermostat setpoint')
+    T_stp_cool = T_stp_cool + DOMSC_cool
+    T_stp_heat = T_stp_heat + DOMSC_heat 
 
-    if T_in < T_CT:
-        # The occupant feels cold, increase heating and cooling stp
-        del_T_MSC = abs(T_stp_heat - T_CT)
-        T_stp_heat = T_stp_heat + del_T_MSC
-        T_stp_cool = T_stp_cool + del_T_MSC
-    else:
-        # The occupant feels hot, decrease heating and cooling stp
-        del_T_MSC = abs(T_stp_cool - T_CT)
-        T_stp_heat = T_stp_heat - del_T_MSC
-        T_stp_cool = T_stp_cool - del_T_MSC
+    T_stp_cool, T_stp_heat = check_setpoints(T_stp_cool, T_stp_heat,current_datetime)
     
-    print(f"New heating setpoint: {T_stp_heat}")
-    print(f"New cooling setpoint: {T_stp_cool}")
     return T_stp_cool, T_stp_heat
 
 def update_simulation_timestep(model):

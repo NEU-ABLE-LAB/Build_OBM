@@ -43,6 +43,8 @@ class Occupant(mesa.Agent):
         print(f"Occupant created,\nID: {unique_id}\nDiscomfort theory: {self.override_theory}")
 
     def step(self) -> None:
+        print(f"Occupant idN: {self.unique_id} simulation started")
+
         # Initialize the output dictionary to avoid errors
         self.output['Habitual override'] = False
         self.output['Discomfort override'] = False
@@ -52,25 +54,26 @@ class Occupant(mesa.Agent):
             vars_2_convert = [key for key in self.current_env_features.keys() if 'T_' in key]
             for var in vars_2_convert:
                     self.current_env_features[var] = om_tools.C_to_F(self.current_env_features[var])
-
         """ 
         +-------------------+
         | Model predictions |
         +-------------------+
         """
-
         # Generate data for the day at midnight
         if (self.current_env_features['DateTime'].hour == 0) & (self.current_env_features['DateTime'].minute == 0):
             # Generate occupancy data at midnight for the next day
-            self.occupancy = om_tools.Markov_occupancy_model(self.init_data['occ_transition_matrix'], sampling_time = self.model.sampling_frequency, current_datetime=self.current_env_features['DateTime'])
+            self.occupancy = om_tools.Markov_occupancy_model(
+                                                            self.init_data['occ_transition_matrix'],
+                                                            sampling_time = self.model.sampling_frequency,
+                                                            current_datetime=self.current_env_features['DateTime']
+                                                            )
 
             # Generate habitual override data at midnight for the next day
-            self.routine_msc_schedule = om_tools.realize_routine_msc(init_data=self.init_data,occupancy_schedule= self.occupancy, current_datetime=self.current_env_features['DateTime'])
-            # self.habitual_schedule.extend(om_tools.Markov_habitual_model(self.habitual_tp_matrix, sampling_time = self.model.sampling_frequency))
-            # self.habitual_schedule.extend(om_tools.Markov_2nd_order_habitual_model(self.habitual_tp_matrix,
-            #                                                              sampling_time = self.model.sampling_frequency,
-            #                                                              current_datetime=self.current_env_features['DateTime']))
-
+            self.routine_msc_schedule = om_tools.realize_routine_msc(
+                                                                    init_data=self.init_data,
+                                                                    occupancy_schedule= self.occupancy,
+                                                                    current_datetime=self.current_env_features['DateTime']
+                                                                    )
 
         # Get current heating and cooling setpoint
         T_stp_cool, T_stp_heat = (self.current_env_features['T_stp_cool'], self.current_env_features['T_stp_heat'])
@@ -80,14 +83,23 @@ class Occupant(mesa.Agent):
         
             # Discomfort Model:
             # Prepare input data for ML
-            self.current_env_features['mo'] = self.occupancy.loc[self.occupancy.datetime == self.current_env_features['DateTime'],'occupancy'].values[0]
+            self.current_env_features['mo'] = self.occupancy.loc[
+                                                                self.occupancy.datetime == self.current_env_features['DateTime'],'occupancy'
+                                                                ].values[0]
 
             if self.override_theory == 'CZT':
-                discomfort_override = om_tools.comfort_zone_theory(self.current_env_features['T_in'] - self.T_CT, cz_threshold = self.cz_threshold)
+                discomfort_override = om_tools.comfort_zone_theory(
+                                                                    del_tin_tct = self.current_env_features['T_in'] - self.T_CT,
+                                                                    cz_threshold = self.cz_threshold
+                                                                    )
 
             elif self.override_theory == 'TFT':
-                discomfort_override = om_tools.frustration_theory(del_tin_tct=self.current_env_features['T_in'] - self.T_CT,
-                alpha=self.TFT_alpha, beta=self.TFT_beta, thermal_frustration=self.thermal_frustration, tf_threshold=self.tf_threshold)
+                discomfort_override = om_tools.frustration_theory(
+                                                                    del_tin_tct=self.current_env_features['T_in'] - self.T_CT,
+                                                                    alpha=self.TFT_alpha, beta=self.TFT_beta,
+                                                                    thermal_frustration=self.thermal_frustration, 
+                                                                    tf_threshold=self.tf_threshold
+                                                                    )
 
             # # Decrease the timer per timestep if a TTO value exists
             # if self.TTO == 0:
@@ -111,24 +123,40 @@ class Occupant(mesa.Agent):
             # If routine based habitual model predicts override and the occupant is present in the home: then decide the setpoint change
             if self.current_env_features['DateTime'] in self.routine_msc_schedule.datetime.values:
 
-                DOMSC_cool = self.routine_msc_schedule.loc[self.routine_msc_schedule.datetime == self.current_env_features['DateTime'],['delT_cool','delT_heat']].values[0][0]
-                DOMSC_heat = self.routine_msc_schedule.loc[self.routine_msc_schedule.datetime == self.current_env_features['DateTime'],['delT_cool','delT_heat']].values[0][1]
+                DOMSC_cool = self.routine_msc_schedule.loc[
+                                                            self.routine_msc_schedule.datetime == self.current_env_features['DateTime'],
+                                                            ['delT_cool','delT_heat']
+                                                            ].values[0][0]
+                DOMSC_heat = self.routine_msc_schedule.loc[
+                                                            self.routine_msc_schedule.datetime == self.current_env_features['DateTime'],
+                                                            ['delT_cool','delT_heat']
+                                                            ].values[0][1]
             
-                T_stp_cool, T_stp_heat = T_stp_cool + DOMSC_cool, T_stp_heat+DOMSC_heat
-                self.output['Habitual override'] = True
-                self.last_override_datetime =  self.current_env_features['DateTime'] # Update the last override time
-                print('Occupant decides to override: Habitual override')
-                print(f"Current heating setpoint: {T_stp_heat}")
-                print(f"Current cooling setpoint: {T_stp_cool}")
-            elif discomfort_override:
-            
-                T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.T_CT, self.current_env_features['T_in'],\
-                    self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
-                if T_stp_heat > T_stp_cool:
-                    T_stp_cool = T_stp_heat + 2
-                self.output['Discomfort override'] = True
-                self.last_override_datetime =  self.current_env_features['DateTime'] # Update the last override time
+                T_stp_cool, T_stp_heat = T_stp_cool + DOMSC_cool, T_stp_heat + DOMSC_heat
 
+                T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(DOMSC_cool,DOMSC_heat,\
+                    self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'],current_datetime= self.current_env_features['DateTime'])
+                self.last_override_datetime =  self.current_env_features['DateTime'] # Update the last override time
+                self.output['Habitual override'] = True
+                print('Occupant decides to override: Habitual override')
+
+            elif discomfort_override:
+                # Decide the setpoint change
+                if self.T_CT < self.current_env_features['T_in']:
+                    # Occupant feels hot, decrease both the setpoints
+                    del_T_MSC = T_stp_cool - self.T_CT
+                    DOMSC_cool = del_T_MSC
+                    DOMSC_heat = del_T_MSC
+                else:
+                    # Occupant feels cold, increase both the setpoints
+                    del_T_MSC = T_stp_heat - self.T_CT
+                    DOMSC_cool = del_T_MSC
+                    DOMSC_heat = del_T_MSC
+
+                T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(DOMSC_cool,DOMSC_heat,\
+                    self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'],current_datetime= self.current_env_features['DateTime'])
+                self.last_override_datetime =  self.current_env_features['DateTime'] # Update the last override time
+                self.output['Discomfort override'] = True
                 # if self.TTO == 0 and self.occupancy[self.model.timestep_day]:
                 #     T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(self.occupant.T_CT, self.current_env_features['T_in'],\
                 #          self.current_env_features['T_stp_heat'], self.current_env_features['T_stp_cool'])
@@ -147,7 +175,7 @@ class Occupant(mesa.Agent):
         self.output['Thermal Frustration'] = self.thermal_frustration[-1]
         self.output['Comfort Delta'] = self.current_env_features['T_in'] - self.T_CT
         
-        print(f"Occupant idN: {self.unique_id} simulated")
+        print(f"Occupant idN: {self.unique_id} simulation completed")
 
 class OccupantModel(mesa.Model):
     '''
@@ -196,8 +224,7 @@ class OccupantModel(mesa.Model):
                 self.schedule.add(occup)
 
     def step(self, ip_data_env) -> None:
-        print(f"Time step: {self.schedule.steps}")
-        
+        print(f"Simulation started for timestep: {self.schedule.steps}")
         for agent in self.schedule.agents:
             agent.current_env_features = ip_data_env
         
