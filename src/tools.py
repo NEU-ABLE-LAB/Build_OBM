@@ -203,7 +203,11 @@ def realize_routine_msc(init_data, occupancy_schedule, current_datetime):
     if N_mscpd == 2:
         # Realize the time of first msc i.e. t_msc_1
         t_msc_1 = None
-        while t_msc_1 not in true_occupancy_dt:
+        iterations = 0
+        while t_msc_1 not in true_occupancy_dt and true_occupancy_dt[-1] != t_msc_1:
+            iterations += 1
+            if iterations > 100:
+                warnings.warn('Could not find a valid time for first msc')
             data = init_data[label + '_' + str(N_mscpd) + 'mscpd_tod1']
             tod_1 = data['tod'].values
             prob = data['prob'].values
@@ -238,7 +242,13 @@ def realize_routine_msc(init_data, occupancy_schedule, current_datetime):
         t_msc_2 = None
         data = init_data[label + '_' + str(N_mscpd) + 'mscpd_tod2_tod1']
         tod_2 = pd.to_datetime([datetime.datetime.combine(current_datetime.date(),pd.to_datetime(item, format='%H:%M:%S').time()) for item in data['tod'].values])
+        iterations = 0
         while t_msc_2 not in true_occupancy_dt:
+            iterations += 1
+            if iterations > 100:
+                warnings.warn('Could not find a valid time for second msc, choosing one from the true occupancy schedule after 1st msc')
+                t_msc_2 = pd.to_datetime(np.random.choice(true_occupancy_dt[true_occupancy_dt> t_msc_1]))
+                break
             prob = np.array(data.loc[data.tod == str(t_msc_1.time())].values[0][1:]).astype(float)
             if np.sum(prob) == 0:
                 t_msc_2 = pd.to_datetime(np.random.choice(tod_2[tod_2 > t_msc_1]))
@@ -281,7 +291,11 @@ def realize_routine_msc(init_data, occupancy_schedule, current_datetime):
     elif N_mscpd == 1:
         # Realize the time of first msc i.e. t_msc_1
         t_msc = None
+        iterations = 0
         while t_msc not in true_occupancy_dt:
+            iterations += 1
+            if iterations > 100:
+                warnings.warn('Could not find a valid time for msc')
             data = init_data[label + '_' + str(N_mscpd) + 'mscpd_tod']
             tod = data['tod'].values
             prob = data['prob'].values
