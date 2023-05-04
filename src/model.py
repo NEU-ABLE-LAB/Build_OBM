@@ -44,6 +44,16 @@ class Occupant(mesa.Agent):
 
     def step(self) -> None:
         print(f"Occupant idN: {self.unique_id} simulation started")
+        season = om_tools.get_season(self.current_env_features['DateTime'])
+        if season != 'heat' or season != 'cool':
+            self.output = {'Motion':None,
+                           'T_stp_cool':self.current_env_features['T_stp_cool'],
+                            'T_stp_heat':self.current_env_features['T_stp_heat'],
+                            'Thermal Frustration': 0,
+                            'Comfort delta': None,
+                            'Habitual override':False,
+                            'Discomfort override':False}
+            pass
 
         # Initialize the output dictionary to avoid errors
         self.output['Habitual override'] = False
