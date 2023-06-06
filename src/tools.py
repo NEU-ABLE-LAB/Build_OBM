@@ -40,9 +40,9 @@ def frustration_theory(del_tin_tct, alpha=1, beta=1, thermal_frustration=[0], tf
     override = False
     thermal_frustration.append(alpha*thermal_frustration[-1]+beta*del_tin_tct)
     
-    if thermal_frustration[-1] > tf_threshold['UL']:
+    if thermal_frustration[-1] >= tf_threshold['UL']:
         override = True
-    elif thermal_frustration[-1] < tf_threshold['LL']:
+    elif thermal_frustration[-1] <= tf_threshold['LL']:
         override = True
     else:
         override = False

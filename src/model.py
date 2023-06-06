@@ -155,7 +155,7 @@ class Occupant(mesa.Agent):
                         del_T_MSC = self.T_CT - self.current_env_features['T_in']
                         DOMSC_cool = del_T_MSC
                         DOMSC_heat = del_T_MSC
-                    if (self.current_env_features['DateTime'] - self.last_override_datetime).seconds > 1200:
+                    if (self.current_env_features['DateTime'] - self.last_override_datetime).seconds > 300:
                         T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(
                                                                                 DOMSC_cool,DOMSC_heat,\
                                                                                 self.current_env_features['T_stp_heat'],
