@@ -171,15 +171,16 @@ def is_weekend(current_datetime):
 # Determine routine msc schedule
 def realize_routine_msc(init_data, occupancy_schedule, current_datetime):
     """ Given the input of Probability density functions, this function computes the next habitual override(s) based on the current season and current weekday/weekend"""
-    # Get current season
-    season = get_season(current_datetime)
-    weekend = is_weekend(current_datetime)
-
+    
     # Initialize output variable
     routine_msc_schedule = pd.DataFrame([], columns=['datetime','delT_cool','delT_heat'])
     true_occupancy_dt = pd.to_datetime(occupancy_schedule.loc[occupancy_schedule['occupancy'] == True,'datetime'].values)
     
     if true_occupancy_dt.size > 10:
+        # Get current season
+        season = get_season(current_datetime)
+        weekend = is_weekend(current_datetime)
+        
         # Get the probability density function for the current season and weekday/weekend
         if weekend == True:
             typeofday_label = 'we'
