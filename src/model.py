@@ -191,7 +191,7 @@ class Occupant(mesa.Agent):
             self.output['Thermal Frustration'] = self.thermal_frustration[-1]
             self.output['Comfort Delta'] = self.current_env_features['T_in'] - self.T_CT
         else:
-            self.output = {'Motion':None,
+            self.output = {'Motion':False,
                            'T_stp_cool':self.current_env_features['T_stp_cool'],
                             'T_stp_heat':self.current_env_features['T_stp_heat'],
                             'Thermal Frustration': 0,
