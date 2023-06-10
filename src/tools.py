@@ -40,9 +40,9 @@ def frustration_theory(del_tin_tct, alpha=1, beta=1, thermal_frustration=[0], tf
     override = False
     thermal_frustration.append(alpha*thermal_frustration[-1]+beta*del_tin_tct)
     
-    if thermal_frustration[-1] > tf_threshold['UL']:
+    if thermal_frustration[-1] >= tf_threshold['UL']:
         override = True
-    elif thermal_frustration[-1] < tf_threshold['LL']:
+    elif thermal_frustration[-1] <= tf_threshold['LL']:
         override = True
     else:
         override = False
@@ -171,167 +171,169 @@ def is_weekend(current_datetime):
 # Determine routine msc schedule
 def realize_routine_msc(init_data, occupancy_schedule, current_datetime):
     """ Given the input of Probability density functions, this function computes the next habitual override(s) based on the current season and current weekday/weekend"""
-    # Get current season
-    season = get_season(current_datetime)
-    weekend = is_weekend(current_datetime)
-
+    
     # Initialize output variable
     routine_msc_schedule = pd.DataFrame([], columns=['datetime','delT_cool','delT_heat'])
     true_occupancy_dt = pd.to_datetime(occupancy_schedule.loc[occupancy_schedule['occupancy'] == True,'datetime'].values)
     
-    # Get the probability density function for the current season and weekday/weekend
-    if weekend == True:
-        typeofday_label = 'we'
-    else:
-        typeofday_label = 'wd'
-    label = season + '_' + typeofday_label
+    if true_occupancy_dt.size > 10:
+        # Get current season
+        season = get_season(current_datetime)
+        weekend = is_weekend(current_datetime)
+        
+        # Get the probability density function for the current season and weekday/weekend
+        if weekend == True:
+            typeofday_label = 'we'
+        else:
+            typeofday_label = 'wd'
+        label = season + '_' + typeofday_label
 
-    # First realize the number of mscs per day i.e. N_mscpd
-    N = init_data[label +'_Nmscpd']['N'].values
-    probs = init_data[label+'_Nmscpd']['prob'].values
-    if np.sum(probs) != 1:
-            diff = abs(1 - np.sum(probs))
-            probs[0] = probs[0] + diff
-    N_mscpd = np.random.choice(N, p = probs)
+        # First realize the number of mscs per day i.e. N_mscpd
+        N = init_data[label +'_Nmscpd']['N'].values
+        probs = init_data[label+'_Nmscpd']['prob'].values
+        if np.sum(probs) != 1:
+                diff = abs(1 - np.sum(probs))
+                probs[0] = probs[0] + diff
+        N_mscpd = np.random.choice(N, p = probs)
 
-    if N_mscpd > 2:
-        # For now, any larger number of mscs is considered as 2 mscs,
-        # TODO: update when PDFs are available for higher number of MSCs
-        N_mscpd = 2
+        if N_mscpd > 2:
+            # For now, any larger number of mscs is considered as 2 mscs,
+            # TODO: update when PDFs are available for higher number of MSCs
+            N_mscpd = 2
 
-    N_mscpd = 2 # For testing purposes, # TODO: remove this line
-    if N_mscpd == 2:
-        # Realize the time of first msc i.e. t_msc_1
-        t_msc_1 = None
-        iterations = 0
-        while t_msc_1 not in true_occupancy_dt and true_occupancy_dt[-1] != t_msc_1:
-            iterations += 1
-            if iterations > 100:
-                warnings.warn('Could not find a valid time for first msc')
-            data = init_data[label + '_' + str(N_mscpd) + 'mscpd_tod1']
-            tod_1 = data['tod'].values
+        N_mscpd = 2 # For testing purposes, # TODO: remove this line
+        if N_mscpd == 2:
+            # Realize the time of first msc i.e. t_msc_1
+            t_msc_1 = None
+            iterations = 0
+            while t_msc_1 not in true_occupancy_dt and true_occupancy_dt[-1] != t_msc_1:
+                iterations += 1
+                if iterations > 100:
+                    warnings.warn('Could not find a valid time for first msc')
+                data = init_data[label + '_' + str(N_mscpd) + 'mscpd_tod1']
+                tod_1 = data['tod'].values
+                prob = data['prob'].values
+                if np.sum(prob) != 1:
+                    diff = abs(1 - np.sum(prob))
+                    prob[0] = prob[0] + diff
+                t_msc_1 = datetime.datetime.combine(current_datetime.date(), pd.to_datetime(np.random.choice(tod_1, p = prob), format='%H:%M:%S').time())
+
+            # Realize the type of first msc i.e. type_msc_1
+            data = init_data[label + '_' + str(N_mscpd) + 'mscpd_type1']
+            types_1 = data['types'].values
             prob = data['prob'].values
             if np.sum(prob) != 1:
                 diff = abs(1 - np.sum(prob))
                 prob[0] = prob[0] + diff
-            t_msc_1 = datetime.datetime.combine(current_datetime.date(), pd.to_datetime(np.random.choice(tod_1, p = prob), format='%H:%M:%S').time())
+            type_1 = np.random.choice(types_1, p = prob)
 
-        # Realize the type of first msc i.e. type_msc_1
-        data = init_data[label + '_' + str(N_mscpd) + 'mscpd_type1']
-        types_1 = data['types'].values
-        prob = data['prob'].values
-        if np.sum(prob) != 1:
-            diff = abs(1 - np.sum(prob))
-            prob[0] = prob[0] + diff
-        type_1 = np.random.choice(types_1, p = prob)
-
-        # Realize the degree of first msc i.e. domsc_1
-        data = init_data[label + '_' + str(N_mscpd) + 'mscpd_'+ season + '_DOO1_'+ type_1 +'_type']
-        domscs_1 = np.array(data.columns[1:]).astype(int)
-        prob = np.array(data.loc[data['tod'] == str(t_msc_1.time())].values[0][1:]).astype(float)
-        if np.sum(prob) == 0:
-            domsc_1 = np.random.choice(domscs_1)
-        elif np.sum(prob) != 1:
-            diff = abs(1 - np.sum(prob))
-            prob[0] = prob[0] + diff
-            domsc_1 = np.random.choice(domscs_1, p = prob)
-        else:
-            domsc_1 = np.random.choice(domscs_1, p = prob)
-
-        # Realize the time of second msc i.e. t_msc_2 given the time of first msc i.e., t_msc_1
-        t_msc_2 = None
-        data = init_data[label + '_' + str(N_mscpd) + 'mscpd_tod2_tod1']
-        tod_2 = pd.to_datetime([datetime.datetime.combine(current_datetime.date(),pd.to_datetime(item, format='%H:%M:%S').time()) for item in data['tod'].values])
-        iterations = 0
-        while t_msc_2 not in true_occupancy_dt:
-            iterations += 1
-            if iterations > 100:
-                warnings.warn('Could not find a valid time for second msc, choosing one from the true occupancy schedule after 1st msc')
-                t_msc_2 = pd.to_datetime(np.random.choice(true_occupancy_dt[true_occupancy_dt> t_msc_1]))
-                break
-            prob = np.array(data.loc[data.tod == str(t_msc_1.time())].values[0][1:]).astype(float)
+            # Realize the degree of first msc i.e. domsc_1
+            data = init_data[label + '_' + str(N_mscpd) + 'mscpd_'+ season + '_DOO1_'+ type_1 +'_type']
+            domscs_1 = np.array(data.columns[1:]).astype(int)
+            prob = np.array(data.loc[data['tod'] == str(t_msc_1.time())].values[0][1:]).astype(float)
             if np.sum(prob) == 0:
-                t_msc_2 = pd.to_datetime(np.random.choice(tod_2[tod_2 > t_msc_1]))
+                domsc_1 = np.random.choice(domscs_1)
             elif np.sum(prob) != 1:
                 diff = abs(1 - np.sum(prob))
-                prob[-1] = prob[-1] + diff
-                t_msc_2 = pd.to_datetime(np.random.choice(tod_2,p =prob))
+                prob[0] = prob[0] + diff
+                domsc_1 = np.random.choice(domscs_1, p = prob)
             else:
-                t_msc_2 = pd.to_datetime(np.random.choice(tod_2,p =prob))
+                domsc_1 = np.random.choice(domscs_1, p = prob)
 
-        # Realize the type of second msc i.e. type_msc_2 given the type of first msc i.e. type_1
-        data = init_data[label + '_' + str(N_mscpd) + 'mscpd_type2_type1_' + type_1]
-        types_2 = data['types'].values
-        prob = data['prob'].values
-        if np.sum(prob) != 1:
-            diff = abs(1 - np.sum(prob))
-            prob[0] = prob[0] + diff
-        type_2 = np.random.choice(types_2, p = prob)
-        
-        # Realize the degree of second msc i.e. DOO_msc_2 given the type and degree of first msc and type of second msc i.e. type_1, DOMSC_1, type_2
-        data = init_data[label + '_' + str(N_mscpd) + 'mscpd_row' + season + '_col' + season + '_DOO2_' + type_1 + '_type1_' + type_2 + '_type2']
-        domscs_2 = np.array(data.columns[1:]).astype(int)
-        prob = np.array(data.loc[data['doo'] == domsc_1].values[0][1:]).astype(float)
-        if np.sum(prob) != 1:
-            diff = abs(1 - np.sum(prob))
-            prob[0] = prob[0] + diff
-        domsc_2 = np.random.choice(domscs_2, p = prob)
+            # Realize the time of second msc i.e. t_msc_2 given the time of first msc i.e., t_msc_1
+            t_msc_2 = None
+            data = init_data[label + '_' + str(N_mscpd) + 'mscpd_tod2_tod1']
+            tod_2 = pd.to_datetime([datetime.datetime.combine(current_datetime.date(),pd.to_datetime(item, format='%H:%M:%S').time()) for item in data['tod'].values])
+            iterations = 0
+            while t_msc_2 not in true_occupancy_dt:
+                iterations += 1
+                if iterations > 100:
+                    warnings.warn('Could not find a valid time for second msc, choosing one from the true occupancy schedule after 1st msc')
+                    t_msc_2 = pd.to_datetime(np.random.choice(true_occupancy_dt[true_occupancy_dt> t_msc_1]))
+                    break
+                prob = np.array(data.loc[data.tod == str(t_msc_1.time())].values[0][1:]).astype(float)
+                if np.sum(prob) == 0:
+                    t_msc_2 = pd.to_datetime(np.random.choice(tod_2[tod_2 > t_msc_1]))
+                elif np.sum(prob) != 1:
+                    diff = abs(1 - np.sum(prob))
+                    prob[-1] = prob[-1] + diff
+                    t_msc_2 = pd.to_datetime(np.random.choice(tod_2,p =prob))
+                else:
+                    t_msc_2 = pd.to_datetime(np.random.choice(tod_2,p =prob))
 
-        if season == 'cool':
-            routine_msc_schedule.datetime = [t_msc_1,t_msc_2]
-            routine_msc_schedule.datetime = pd.Series(routine_msc_schedule.datetime.dt.to_pydatetime(),dtype='object')
-            routine_msc_schedule.delT_cool = [domsc_1,domsc_2]
-            routine_msc_schedule.delT_heat = [0,0]
-        elif season == 'heat':
-            routine_msc_schedule.datetime = [t_msc_1,t_msc_2]
-            routine_msc_schedule.datetime = pd.Series(routine_msc_schedule.datetime.dt.to_pydatetime(),dtype='object')
-            routine_msc_schedule.delT_cool = [0,0]
-            routine_msc_schedule.delT_heat = [domsc_1,domsc_2]
-
-    elif N_mscpd == 1:
-        # Realize the time of first msc i.e. t_msc_1
-        t_msc = None
-        iterations = 0
-        while t_msc not in true_occupancy_dt:
-            iterations += 1
-            if iterations > 100:
-                warnings.warn('Could not find a valid time for msc')
-            data = init_data[label + '_' + str(N_mscpd) + 'mscpd_tod']
-            tod = data['tod'].values
+            # Realize the type of second msc i.e. type_msc_2 given the type of first msc i.e. type_1
+            data = init_data[label + '_' + str(N_mscpd) + 'mscpd_type2_type1_' + type_1]
+            types_2 = data['types'].values
             prob = data['prob'].values
             if np.sum(prob) != 1:
                 diff = abs(1 - np.sum(prob))
                 prob[0] = prob[0] + diff
-            t_msc = datetime.datetime.combine(current_datetime.date(), pd.to_datetime(np.random.choice(tod, p = prob), format='%H:%M:%S').time())
+            type_2 = np.random.choice(types_2, p = prob)
+            
+            # Realize the degree of second msc i.e. DOO_msc_2 given the type and degree of first msc and type of second msc i.e. type_1, DOMSC_1, type_2
+            data = init_data[label + '_' + str(N_mscpd) + 'mscpd_row' + season + '_col' + season + '_DOO2_' + type_1 + '_type1_' + type_2 + '_type2']
+            domscs_2 = np.array(data.columns[1:]).astype(int)
+            prob = np.array(data.loc[data['doo'] == domsc_1].values[0][1:]).astype(float)
+            if np.sum(prob) != 1:
+                diff = abs(1 - np.sum(prob))
+                prob[0] = prob[0] + diff
+            domsc_2 = np.random.choice(domscs_2, p = prob)
 
-        # Realize the type of first msc i.e. type_msc_1
-        data = init_data[label + '_' + str(N_mscpd) + 'mscpd_type']
-        types = data['types'].values
-        prob = data['prob'].values
-        if np.sum(prob) != 1:
-            diff = abs(1 - np.sum(prob))
-            prob[0] = prob[0] + diff
-        type = np.random.choice(types, p = prob)
+            if season == 'cool':
+                routine_msc_schedule.datetime = [t_msc_1,t_msc_2]
+                routine_msc_schedule.datetime = pd.Series(routine_msc_schedule.datetime.dt.to_pydatetime(),dtype='object')
+                routine_msc_schedule.delT_cool = [domsc_1,domsc_2]
+                routine_msc_schedule.delT_heat = [0,0]
+            elif season == 'heat':
+                routine_msc_schedule.datetime = [t_msc_1,t_msc_2]
+                routine_msc_schedule.datetime = pd.Series(routine_msc_schedule.datetime.dt.to_pydatetime(),dtype='object')
+                routine_msc_schedule.delT_cool = [0,0]
+                routine_msc_schedule.delT_heat = [domsc_1,domsc_2]
 
-        # Realize the degree of first msc i.e. domsc
-        data = init_data[label + '_' + str(N_mscpd) + 'mscpd_'+ season + '_DOO_'+ type +'_type']
-        domscs = np.array(data.columns[1:]).astype(int)
-        prob = np.array(data.loc[data['tod'] == str(t_msc.time())].values[0][1:]).astype(float)
-        if np.sum(prob) != 1:
-            diff = abs(1 - np.sum(prob))
-            prob[0] = prob[0] + diff
-        domsc = np.random.choice(domscs, p = prob)
-        
-        if season == 'cool':
-            routine_msc_schedule.datetime = t_msc
-            routine_msc_schedule.datetime = pd.Series(routine_msc_schedule.datetime.dt.to_pydatetime(),dtype='object')
-            routine_msc_schedule.delT_cool = domsc
-            routine_msc_schedule.delT_heat =0
-        elif season == 'heat':
-            routine_msc_schedule.datetime = t_msc
-            routine_msc_schedule.datetime = pd.Series(routine_msc_schedule.datetime.dt.to_pydatetime(),dtype='object')
-            routine_msc_schedule.delT_cool = 0
-            routine_msc_schedule.delT_heat = domsc
+        elif N_mscpd == 1:
+            # Realize the time of first msc i.e. t_msc_1
+            t_msc = None
+            iterations = 0
+            while t_msc not in true_occupancy_dt:
+                iterations += 1
+                if iterations > 100:
+                    warnings.warn('Could not find a valid time for msc')
+                data = init_data[label + '_' + str(N_mscpd) + 'mscpd_tod']
+                tod = data['tod'].values
+                prob = data['prob'].values
+                if np.sum(prob) != 1:
+                    diff = abs(1 - np.sum(prob))
+                    prob[0] = prob[0] + diff
+                t_msc = datetime.datetime.combine(current_datetime.date(), pd.to_datetime(np.random.choice(tod, p = prob), format='%H:%M:%S').time())
+
+            # Realize the type of first msc i.e. type_msc_1
+            data = init_data[label + '_' + str(N_mscpd) + 'mscpd_type']
+            types = data['types'].values
+            prob = data['prob'].values
+            if np.sum(prob) != 1:
+                diff = abs(1 - np.sum(prob))
+                prob[0] = prob[0] + diff
+            type = np.random.choice(types, p = prob)
+
+            # Realize the degree of first msc i.e. domsc
+            data = init_data[label + '_' + str(N_mscpd) + 'mscpd_'+ season + '_DOO_'+ type +'_type']
+            domscs = np.array(data.columns[1:]).astype(int)
+            prob = np.array(data.loc[data['tod'] == str(t_msc.time())].values[0][1:]).astype(float)
+            if np.sum(prob) != 1:
+                diff = abs(1 - np.sum(prob))
+                prob[0] = prob[0] + diff
+            domsc = np.random.choice(domscs, p = prob)
+            
+            if season == 'cool':
+                routine_msc_schedule.datetime = t_msc
+                routine_msc_schedule.datetime = pd.Series(routine_msc_schedule.datetime.dt.to_pydatetime(),dtype='object')
+                routine_msc_schedule.delT_cool = domsc
+                routine_msc_schedule.delT_heat =0
+            elif season == 'heat':
+                routine_msc_schedule.datetime = t_msc
+                routine_msc_schedule.datetime = pd.Series(routine_msc_schedule.datetime.dt.to_pydatetime(),dtype='object')
+                routine_msc_schedule.delT_cool = 0
+                routine_msc_schedule.delT_heat = domsc
 
     return routine_msc_schedule
 
