@@ -201,7 +201,7 @@ def realize_routine_msc(init_data, occupancy_schedule, current_datetime):
             # TODO: update when PDFs are available for higher number of MSCs
             N_mscpd = 2
 
-        N_mscpd = 2 # For testing purposes, # TODO: remove this line
+        # N_mscpd = 2 # For testing purposes, # TODO: remove this line
         if N_mscpd == 2:
             # Realize the time of first msc i.e. t_msc_1
             t_msc_1 = None
