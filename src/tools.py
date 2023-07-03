@@ -317,7 +317,7 @@ def realize_routine_msc(init_data, occupancy_schedule, current_datetime):
 
             # Realize the degree of first msc i.e. domsc
             data = init_data[label + '_' + str(N_mscpd) + 'mscpd_'+ season + '_DOO_'+ type +'_type']
-            domscs = np.array(data.columns[1:]).astype(int)
+            domscs = np.round(np.array(data.columns[1:]).astype('float')).astype('int')
             prob = np.array(data.loc[data['tod'] == str(t_msc.time())].values[0][1:]).astype(float)
             if np.sum(prob) != 1:
                 diff = abs(1 - np.sum(prob))

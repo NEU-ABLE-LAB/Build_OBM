@@ -248,7 +248,7 @@ class OccupantModel(mesa.Model):
                 self.schedule.add(occup)
 
     def step(self, ip_data_env) -> None:
-        print(f"Simulation started for timestep: {self.schedule.steps}")
+        print(f"OCcupant simulation started for timestep: {self.schedule.steps}")
         for agent in self.schedule.agents:
             agent.current_env_features = ip_data_env
         
@@ -256,3 +256,4 @@ class OccupantModel(mesa.Model):
         
         # Update simulation specific time parameters
         om_tools.update_simulation_timestep(self)
+        print(f"Occupant simulation finished for timestep: {self.schedule.steps}")
