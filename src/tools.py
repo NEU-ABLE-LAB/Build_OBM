@@ -406,13 +406,13 @@ def Markov_2nd_order_habitual_model(TM,sampling_time,current_datetime):
     sampled_override_schedule = [y for x in override_schedule for y in x]
     return sampled_override_schedule
 
-def decide_heat_cool_stp(DOMSC_cool, DOMSC_heat, T_stp_heat, T_stp_cool,current_datetime,tstat_db):
+def decide_heat_cool_stp(DOMSC_cool, DOMSC_heat, T_stp_heat, T_stp_cool,current_datetime,tstat_db,temp_units):
     """ Decide the change in setpoint based on indoor temperature difference from comfort temperature """
     print('Occupant decides to override the thermostat setpoint')
     T_stp_cool = T_stp_cool + DOMSC_cool
     T_stp_heat = T_stp_heat + DOMSC_heat 
 
-    T_stp_cool, T_stp_heat = check_setpoints(T_stp_cool, T_stp_heat,current_datetime, tstat_db)
+    T_stp_cool, T_stp_heat = check_setpoints(T_stp_cool, T_stp_heat,current_datetime, tstat_db, temp_units)
     
     return T_stp_cool, T_stp_heat
 
