@@ -21,11 +21,11 @@ def comfort_zone_theory(del_tin_tct, cz_threshold = {'UL':4,'LL':-4}):
         override = False
     return override
 
-def check_setpoints(T_stp_cool, T_stp_heat, current_datetime,tstat_db):
+def check_setpoints(T_stp_cool, T_stp_heat, current_datetime,tstat_db,temp_units):
     """
     Cooling setpoint should always be greater than the heating setpoint. 
     If not, based on the season, the setpoints are adjusted for energy intensive overrides.
-    """    
+    """ 
     if T_stp_cool - tstat_db < T_stp_heat:
         warnings.warn("Cooling setpoint - db is less than the heating setpoint")
         season = get_season(current_datetime)
@@ -33,6 +33,15 @@ def check_setpoints(T_stp_cool, T_stp_heat, current_datetime,tstat_db):
             T_stp_heat = math.floor(T_stp_cool - (tstat_db + 0.5))
         elif season == 'heat':
             T_stp_cool = math.ceil(T_stp_heat + (tstat_db + 0.5))
+    
+    if T_stp_cool < 0 | T_stp_heat < 0:
+        warnings.warn(f"Cooling setpoint {T_stp_cool} or heating setpoint {T_stp_heat} is less than 0")
+        if temp_units == "F":
+            T_stp_cool = 60
+            T_stp_heat = 50
+        else:
+            T_stp_cool = 15
+            T_stp_heat = 10
 
     return T_stp_cool, T_stp_heat
 

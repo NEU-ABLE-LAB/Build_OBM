@@ -140,7 +140,8 @@ class Occupant(mesa.Agent):
                                                                             self.current_env_features['T_stp_heat'],
                                                                             self.current_env_features['T_stp_cool'],
                                                                             current_datetime= self.current_env_features['DateTime'],
-                                                                            tstat_db = self.tstat_db                                                                            
+                                                                            tstat_db = self.tstat_db,
+                                                                            temp_units=self.units                                                                                                                                                    
                                                                             )
                     self.last_override_datetime =  self.current_env_features['DateTime'] # Update the last override time
                     self.output['Habitual override'] = True
@@ -164,8 +165,9 @@ class Occupant(mesa.Agent):
                                                                                 self.current_env_features['T_stp_heat'],
                                                                                 self.current_env_features['T_stp_cool'],
                                                                                 current_datetime= self.current_env_features['DateTime'],
-                                                                                tstat_db = self.tstat_db 
-                                                                                )
+                                                                                tstat_db = self.tstat_db,
+                                                                                temp_units=self.units                                                                                                                                                    
+                                                                            )
                         self.last_override_datetime =  self.current_env_features['DateTime'] # Update the last override time
                         self.output['Discomfort override'] = True
                         print('Occupant decides to override: Discomfort override')
@@ -183,7 +185,7 @@ class Occupant(mesa.Agent):
 
             if self.units == 'C':
                 T_stp_cool, T_stp_heat = om_tools.check_setpoints(om_tools.F_to_C(T_stp_cool), om_tools.F_to_C(T_stp_heat),
-                                                          self.current_env_features['DateTime'],tstat_db = self.tstat_db)
+                                                          self.current_env_features['DateTime'],tstat_db = self.tstat_db,temp_units=self.units)
                 self.output['T_stp_cool'] = om_tools.F_to_C(T_stp_cool)
                 self.output['T_stp_heat'] = om_tools.F_to_C(T_stp_heat)
             else: 
