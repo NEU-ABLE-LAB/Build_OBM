@@ -6,6 +6,7 @@ import seaborn as sns
 import pathlib
 import datetime
 import warnings
+import math
 
 
 def comfort_zone_theory(del_tin_tct, cz_threshold = {'UL':4,'LL':-4}):
@@ -20,18 +21,19 @@ def comfort_zone_theory(del_tin_tct, cz_threshold = {'UL':4,'LL':-4}):
         override = False
     return override
 
-def check_setpoints(T_stp_cool, T_stp_heat, current_datetime):
+def check_setpoints(T_stp_cool, T_stp_heat, current_datetime,tstat_db):
     """
     Cooling setpoint should always be greater than the heating setpoint. 
     If not, based on the season, the setpoints are adjusted for energy intensive overrides.
     """    
-    if T_stp_cool < T_stp_heat:
-        warnings.warn("Recommended cooling setpoint is less than the heating setpoint")
+    if T_stp_cool - tstat_db < T_stp_heat:
+        warnings.warn("Cooling setpoint - db is less than the heating setpoint")
         season = get_season(current_datetime)
         if season == 'cool':
-            T_stp_heat = T_stp_cool - 2
+            T_stp_heat = math.floor(T_stp_cool - (tstat_db + 0.5))
         elif season == 'heat':
-            T_stp_cool = T_stp_heat + 2
+            T_stp_cool = math.ceil(T_stp_heat + (tstat_db + 0.5))
+
     return T_stp_cool, T_stp_heat
 
 def frustration_theory(del_tin_tct, alpha=1, beta=1, thermal_frustration=[0], tf_threshold={'UL':4,'LL':-4}):
@@ -395,13 +397,13 @@ def Markov_2nd_order_habitual_model(TM,sampling_time,current_datetime):
     sampled_override_schedule = [y for x in override_schedule for y in x]
     return sampled_override_schedule
 
-def decide_heat_cool_stp(DOMSC_cool, DOMSC_heat, T_stp_heat, T_stp_cool,current_datetime):
+def decide_heat_cool_stp(DOMSC_cool, DOMSC_heat, T_stp_heat, T_stp_cool,current_datetime,tstat_db):
     """ Decide the change in setpoint based on indoor temperature difference from comfort temperature """
     print('Occupant decides to override the thermostat setpoint')
     T_stp_cool = T_stp_cool + DOMSC_cool
     T_stp_heat = T_stp_heat + DOMSC_heat 
 
-    T_stp_cool, T_stp_heat = check_setpoints(T_stp_cool, T_stp_heat,current_datetime)
+    T_stp_cool, T_stp_heat = check_setpoints(T_stp_cool, T_stp_heat,current_datetime, tstat_db)
     
     return T_stp_cool, T_stp_heat
 
