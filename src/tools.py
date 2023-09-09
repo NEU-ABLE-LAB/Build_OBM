@@ -27,7 +27,7 @@ def check_setpoints(T_stp_cool, T_stp_heat, current_datetime,tstat_db,temp_units
     If not, based on the season, the setpoints are adjusted for energy intensive overrides.
     """ 
     if T_stp_cool - tstat_db < T_stp_heat:
-        warnings.warn("Cooling setpoint - db is less than the heating setpoint")
+        warnings.warn(f"Cooling setpoint({T_stp_cool}) - db({tstat_db}) is less than the heating setpoint({T_stp_heat})")
         season = get_season(current_datetime)
         if season == 'cool':
             T_stp_heat = math.floor(T_stp_cool - (tstat_db + 0.5))

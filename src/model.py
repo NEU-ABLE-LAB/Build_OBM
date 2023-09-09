@@ -186,8 +186,8 @@ class Occupant(mesa.Agent):
             if self.units == 'C':
                 T_stp_cool, T_stp_heat = om_tools.check_setpoints(om_tools.F_to_C(T_stp_cool), om_tools.F_to_C(T_stp_heat),
                                                           self.current_env_features['DateTime'],tstat_db = self.tstat_db,temp_units=self.units)
-                self.output['T_stp_cool'] = om_tools.F_to_C(T_stp_cool)
-                self.output['T_stp_heat'] = om_tools.F_to_C(T_stp_heat)
+                self.output['T_stp_cool'] = T_stp_cool
+                self.output['T_stp_heat'] = T_stp_heat
             else: 
                 T_stp_cool, T_stp_heat = om_tools.check_setpoints(om_tools.F_to_C(T_stp_cool), om_tools.F_to_C(T_stp_heat),
                                                           self.current_env_features['DateTime'],tstat_db = self.tstat_db,temp_units=self.units)
