@@ -151,16 +151,17 @@ def get_season(current_datetime):
     current_date = current_datetime.date()
     # Get the current month
     current_month = current_date.month
+    season='cool'
     
-    # Get the current season
-    if current_month == 12 or current_month == 1 or current_month == 2:
-        season = 'heat'
-    elif current_month == 3 or current_month == 4 or current_month == 5:
-        season = 'heat2cool'
-    elif current_month == 6 or current_month == 7 or current_month == 8:
-        season = 'cool'
-    elif current_month == 9 or current_month == 10 or current_month == 11:
-        season = 'cool2heat'
+    # # Get the current season
+    # if current_month == 12 or current_month == 1 or current_month == 2:
+    #     season = 'heat'
+    # elif current_month == 3 or current_month == 4 or current_month == 5:
+    #     season = 'heat2cool'
+    # elif current_month == 6 or current_month == 7 or current_month == 8:
+    #     season = 'cool'
+    # elif current_month == 9 or current_month == 10 or current_month == 11:
+    #     season = 'cool2heat'
     return season
 
 # Function to flag weekend for the input date
