@@ -61,12 +61,18 @@ def frustration_theory(del_tin_tct, alpha=1, beta=1, thermal_frustration=[0], tf
         override = False
     return override
 
-def Markov_occupancy_model(tp_matrix, sampling_time,current_datetime):
+def Markov_occupancy_model(init_data, sampling_time,current_datetime):
     """ Generate a 1st order markov chain model that synthesizes occupancy schedule for the entire day
     Created using transition matrices discussed in the paper: https://doi.org/10.1016/j.enbuild.2008.02.006
     """
     # Intitating output variable
     occupancy = []
+    # Get current season
+    weekend = is_weekend(current_datetime)
+    if weekend:
+        tp_matrix = init_data['occ_tm_we']
+    else:
+        tp_matrix = init_data['occ_tm_wd']
 
     # Synthesize data for the day, 10-minutes sampling time used for transition matrices. 
     # Therefore, the data is synthesized for 144 minutes numbers and later sampled based on input parameter "sampling_time"
@@ -88,7 +94,7 @@ def Markov_occupancy_model(tp_matrix, sampling_time,current_datetime):
         # Probability should add up to 1.
         if probs[0] + probs[1] != 1:
             # If the probabilities were rounded up, remove the thousandnth decimal.
-            probs[0] = probs[0] - 0.001
+            probs[0] = probs[0] + 1 - (probs[0] + probs[1])
         
         # Estimate the next state
         next_state = np.random.choice([False, True], p = probs)

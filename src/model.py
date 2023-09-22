@@ -66,7 +66,7 @@ class Occupant(mesa.Agent):
             if (self.current_env_features['DateTime'].hour == 0) & (self.current_env_features['DateTime'].minute == 0):
                 # Generate occupancy data at midnight for the next day
                 self.occupancy = om_tools.Markov_occupancy_model(
-                                                                self.init_data['occ_transition_matrix'],
+                                                                init_data= self.init_data,
                                                                 sampling_time = self.model.sampling_frequency,
                                                                 current_datetime=self.current_env_features['DateTime']
                                                                 )
