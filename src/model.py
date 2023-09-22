@@ -8,8 +8,9 @@ import tools as om_tools
 class Occupant(mesa.Agent):
     """ An occupant agent: Contains information specific to an occupant """
     def __init__(self, unique_id: int, model, home_ID,units, init_data, models,
-                comfort_temperature, discomfort_theory_name='czt',threshold={'UL':4,'LL':-4},
-                TFT_alpha=1,TFT_beta=1,start_datetime=om_tools.datetime.datetime(1996,3,30,0,0)) -> None:
+                comfort_temperature, discomfort_theory_name='czt', threshold={'UL':4,'LL':-4},
+                TFT_alpha=1, TFT_beta=1, start_datetime=om_tools.datetime.datetime(1996,3,30,0,0),
+                tstat_db=0.0) -> None:
         
         super().__init__(unique_id, model)
         self.home_ID = home_ID # Occupant's residence
@@ -25,6 +26,7 @@ class Occupant(mesa.Agent):
             self.T_CT = comfort_temperature
         self.override_theory = discomfort_theory_name.upper() # Override theory name
         self.last_override_datetime = start_datetime # Time since the last override
+        self.tstat_db = tstat_db
 
         # Discomfort model - Initialize parameters
         if self.override_theory == 'TFT':
@@ -64,7 +66,7 @@ class Occupant(mesa.Agent):
             if (self.current_env_features['DateTime'].hour == 0) & (self.current_env_features['DateTime'].minute == 0):
                 # Generate occupancy data at midnight for the next day
                 self.occupancy = om_tools.Markov_occupancy_model(
-                                                                self.init_data['occ_transition_matrix'],
+                                                                init_data= self.init_data,
                                                                 sampling_time = self.model.sampling_frequency,
                                                                 current_datetime=self.current_env_features['DateTime']
                                                                 )
@@ -137,7 +139,9 @@ class Occupant(mesa.Agent):
                                                                             DOMSC_cool,DOMSC_heat,\
                                                                             self.current_env_features['T_stp_heat'],
                                                                             self.current_env_features['T_stp_cool'],
-                                                                            current_datetime= self.current_env_features['DateTime']
+                                                                            current_datetime= self.current_env_features['DateTime'],
+                                                                            tstat_db = self.tstat_db,
+                                                                            temp_units=self.units                                                                                                                                                    
                                                                             )
                     self.last_override_datetime =  self.current_env_features['DateTime'] # Update the last override time
                     self.output['Habitual override'] = True
@@ -155,13 +159,15 @@ class Occupant(mesa.Agent):
                         del_T_MSC = self.T_CT - self.current_env_features['T_in']
                         DOMSC_cool = del_T_MSC
                         DOMSC_heat = del_T_MSC
-                    if (self.current_env_features['DateTime'] - self.last_override_datetime).seconds > 1200:
+                    if (self.current_env_features['DateTime'] - self.last_override_datetime).seconds > 300:
                         T_stp_cool, T_stp_heat = om_tools.decide_heat_cool_stp(
                                                                                 DOMSC_cool,DOMSC_heat,\
                                                                                 self.current_env_features['T_stp_heat'],
                                                                                 self.current_env_features['T_stp_cool'],
-                                                                                current_datetime= self.current_env_features['DateTime']
-                                                                                )
+                                                                                current_datetime= self.current_env_features['DateTime'],
+                                                                                tstat_db = self.tstat_db,
+                                                                                temp_units=self.units                                                                                                                                                    
+                                                                            )
                         self.last_override_datetime =  self.current_env_features['DateTime'] # Update the last override time
                         self.output['Discomfort override'] = True
                         print('Occupant decides to override: Discomfort override')
@@ -178,9 +184,13 @@ class Occupant(mesa.Agent):
                 self.thermal_frustration =[0] # Reset thermal frustration if the occupant is not present in the home
 
             if self.units == 'C':
-                self.output['T_stp_cool'] = om_tools.F_to_C(T_stp_cool)
-                self.output['T_stp_heat'] = om_tools.F_to_C(T_stp_heat)
+                T_stp_cool, T_stp_heat = om_tools.check_setpoints(om_tools.F_to_C(T_stp_cool), om_tools.F_to_C(T_stp_heat),
+                                                          self.current_env_features['DateTime'],tstat_db = self.tstat_db,temp_units=self.units)
+                self.output['T_stp_cool'] = T_stp_cool
+                self.output['T_stp_heat'] = T_stp_heat
             else: 
+                T_stp_cool, T_stp_heat = om_tools.check_setpoints(om_tools.F_to_C(T_stp_cool), om_tools.F_to_C(T_stp_heat),
+                                                          self.current_env_features['DateTime'],tstat_db = self.tstat_db,temp_units=self.units)
                 self.output['T_stp_cool'] = T_stp_cool
                 self.output['T_stp_heat'] = T_stp_heat
             
@@ -191,7 +201,7 @@ class Occupant(mesa.Agent):
             self.output['Thermal Frustration'] = self.thermal_frustration[-1]
             self.output['Comfort Delta'] = self.current_env_features['T_in'] - self.T_CT
         else:
-            self.output = {'Motion':None,
+            self.output = {'Motion':False,
                            'T_stp_cool':self.current_env_features['T_stp_cool'],
                             'T_stp_heat':self.current_env_features['T_stp_heat'],
                             'Thermal Frustration': 0,
@@ -214,7 +224,9 @@ class OccupantModel(mesa.Model):
 
     Uses the Occupant class to simulate occupants in a home
     '''
-    def __init__(self, units, N_homes,N_occupants_in_home, sampling_frequency,  models, init_data,  comfort_temperature, discomfort_theory_name, threshold, TFT_alpha,TFT_beta,start_datetime) -> None:
+    def __init__(self, units, N_homes,N_occupants_in_home, sampling_frequency,
+                 models, init_data,  comfort_temperature, discomfort_theory_name,
+                 threshold, TFT_alpha, TFT_beta, start_datetime, tstat_db) -> None:
         '''
         Intialize the model for occupant(s) in home(s)
         '''
@@ -242,13 +254,13 @@ class OccupantModel(mesa.Model):
                 occup = Occupant(unique_id=home_ID + occup_ID, model=self, home_ID=home_ID, units=self.units,\
                                 models=models, init_data=init_data, comfort_temperature=comfort_temperature,\
                                 discomfort_theory_name=discomfort_theory_name, threshold=threshold,\
-                                TFT_alpha=TFT_alpha,TFT_beta=TFT_beta, start_datetime=start_datetime)
+                                TFT_alpha=TFT_alpha,TFT_beta=TFT_beta, start_datetime=start_datetime, tstat_db = tstat_db)
 
                 # Add occupant to the scheduler
                 self.schedule.add(occup)
 
     def step(self, ip_data_env) -> None:
-        print(f"Simulation started for timestep: {self.schedule.steps}")
+        print(f"OCcupant simulation started for timestep: {self.schedule.steps}")
         for agent in self.schedule.agents:
             agent.current_env_features = ip_data_env
         
@@ -256,3 +268,4 @@ class OccupantModel(mesa.Model):
         
         # Update simulation specific time parameters
         om_tools.update_simulation_timestep(self)
+        print(f"Occupant simulation finished for timestep: {self.schedule.steps}")
